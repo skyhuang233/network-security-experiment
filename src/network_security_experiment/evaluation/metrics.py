@@ -39,6 +39,9 @@ def analytic_object_capacity(method: str, key_set_size: int = 128) -> dict[str, 
             "basis": "1 bit per cache key (existence/absence)",
             "reserved_header_keys": M3_RESERVED_KEYS,
         }
+    if method == "CTRL-DIRECT":
+        # environment-validation control, not a storage carrier (§9)
+        return {"bits_per_object": None, "basis": "direct mailbox (no storage carrier)"}
     raise ValueError(method)
 
 

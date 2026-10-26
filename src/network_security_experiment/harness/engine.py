@@ -43,6 +43,7 @@ class CaseRunConfig:
     num_agents: int = 2
     max_rounds: int = 100
     policy_mode: str = "shared"
+    writable_subset: tuple[str, ...] | None = None  # control (c)
     key_set_size: int = 128  # M3
     ttl_seconds: float | None = None  # M3, experiment C
     provider_name: str = "openai"  # or "scripted" (dev-only)

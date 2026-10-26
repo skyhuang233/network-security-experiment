@@ -20,9 +20,14 @@ ADAPTERS: dict[str, type[ChannelAdapter]] = {
 
 
 def build_policy(config: CaseRunConfig) -> ChannelPolicy:
+    subset = (
+        frozenset(config.writable_subset)
+        if config.writable_subset is not None
+        else None
+    )
     return ChannelPolicy(
         mode=config.policy_mode,
-        writable_subset=None,
+        writable_subset=subset,
         ttl_seconds=config.ttl_seconds,
         key_set_size=config.key_set_size,
     )
