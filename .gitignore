@@ -6,3 +6,4 @@ results/
 
 # Experiment artifacts
 *.jsonl.tmp
+references/silo-bench/acl26-silo-bench/
