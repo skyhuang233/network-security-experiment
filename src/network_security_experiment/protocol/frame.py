@@ -42,13 +42,15 @@ HEADER_SIZE = 9  # bytes on the wire for M1/M2
 M1_BODY_LIMIT = 256  # L = 256 B fixed content limit for M1 file bodies
 M2_NAME_CHAR_LIMIT = 240  # <= 240 chars after reserving header/separator room
 
-# M3 per-publication reserved header keys (see channels/m3_cache.py):
+# M3 per-publication reserved keys (see channels/m3_cache.py):
 #   keys 0..7   msg_id low 8 bits        (8 keys)
 #   keys 8..13  chunk_id low 6 bits      (6 keys)
-#   keys 14..21 total_chunks low 8 bits  (8 keys)
-#   key  22     frame_published          (1 key)
-#   key  23     parity                   (1 key)
-M3_RESERVED_KEYS = 24
+#   key  14     frame_published          (1 key)
+#   key  15     parity                   (1 key)
+#   key  16     publication toggle       (1 key)
+#   key  17     activity marker          (1 key)
+#   total 18; payload keys start at index 18
+M3_RESERVED_KEYS = 18
 
 # --- CRC-16/CCITT-FALSE -------------------------------------------------------
 

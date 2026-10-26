@@ -70,8 +70,15 @@ def build_run(
     provider,
     workspace: Path,
 ) -> CaseRun:
-    """Assemble one CaseRun with its own channel backend namespace."""
+    """Assemble one CaseRun with its own channel backend namespace.
+
+    §14 run discipline: shared state and agent history are cleared before
+    every run.
+    """
+    import shutil
+
     run_dir = workspace / config.case_run_id
+    shutil.rmtree(run_dir, ignore_errors=True)
     root = run_dir / "channel"
     mlog = MeasurementLog(method=config.method, case_run_id=config.case_run_id)
     adapter = ADAPTERS[config.method](

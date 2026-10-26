@@ -11,7 +11,7 @@ Carrier: key EXISTENCE / absence only (1 bit per key).  Key names carry no
 task text and cache VALUES are never read as bodies.
 
 Key set: K keys per sender (`s{sender}_k{index:04d}`), fixed for the run.
-Reserved per-publication header keys (16 of them, per sender):
+Per-publication reserved header keys (18 of them, per sender):
     k00..k07  msg_id low 8 bits          (logical msg_id is 16 bit; the
                                           physical header carries the low
                                           byte — >256 messages per sender
@@ -20,7 +20,14 @@ Reserved per-publication header keys (16 of them, per sender):
     k08..k13  chunk_id low 6 bits
     k14       frame_published (final segment of final chunk only)
     k15       parity over reserved keys k00..k14 (coarse header check)
-Remaining K-16 keys carry payload bits, 1 bit per key, per publication.
+    k16       publication toggle: flips on EVERY publication, so a receiver
+              (including a FRESH one joining later, e.g. the persistence
+              test) can tell "new publication since my last read" from the
+              physical state alone — no per-receiver bookkeeping
+    k17       activity marker: set on the first publication, never cleared —
+              distinguishes "never published" (all keys absent) from a real
+              publication whose state happens to be all-absent payload keys
+Remaining K-18 keys carry payload bits, 1 bit per key, per publication.
 
 Per-chunk bit stream (the 9 B logical frame cannot fit in reserved keys, so
 its semantic content travels in-band):
@@ -80,21 +87,23 @@ class M3CacheStateChannel(ChannelAdapter):
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         self.K = self.policy.key_set_size
-        if self.K <= 16:
+        if self.K <= 18:
             raise ValueError(
-                f"M3 needs K > 16 reserved keys (got K={self.K}); "
-                "smaller K is structurally infeasible — record as sweep result"
+                f"M3 needs K > 18 reserved keys (16 header + toggle + "
+                f"activity; got K={self.K}); smaller K is structurally "
+                "infeasible — record as sweep result"
             )
         self.live_dir = self.root / "live"
         self.live_dir.mkdir(parents=True, exist_ok=True)
         # one independent handle per agent, same directory (real cross-handle I/O)
         self._caches: dict[int, diskcache.Cache] = {}
-        # publication generation per sender (0 = nothing published yet)
+        # publication generation per sender (0 = nothing published yet);
+        # its parity is the physical toggle key k16
         self._gen: dict[int, int] = {i: 0 for i in range(self.num_agents)}
-        # last generation consumed by each receiver per sender
-        self._rx_gen: dict[int, dict[int, int]] = {
-            i: {s: 0 for s in range(self.num_agents)} for i in range(self.num_agents)
-        }
+        # last toggle seen by each receiver per sender: (receiver, sender)
+        # -> toggle bit or None (None = never read: first read always
+        # consumes the current physical state)
+        self._rx_toggle: dict[tuple[int, int], int | None] = {}
         # in-flight chunk queues: sender -> deque of (msg_id, chunk_id,
         # total_chunks, frame_published, segments[list[int]], next_seg_idx)
         self._inflight: dict[int, deque] = {i: deque() for i in range(self.num_agents)}
@@ -121,10 +130,10 @@ class M3CacheStateChannel(ChannelAdapter):
         if self.policy.writable_subset is not None:
             return [
                 i
-                for i in range(16, self.K)
+                for i in range(18, self.K)
                 if str(i) in self.policy.writable_subset
             ]
-        return list(range(16, self.K))
+        return list(range(18, self.K))
 
     # ------------------------------------------------------------- send side
 
@@ -174,7 +183,8 @@ class M3CacheStateChannel(ChannelAdapter):
     def _publish_segment(self, sender: int, chunk: dict, seg: list[int]) -> None:
         cache = self._cache(sender)
         idx = self._payload_indices()
-        # reserved keys: msg_id low 8, chunk_id low 6, published, parity
+        # reserved keys: msg_id low 8, chunk_id low 6, published, parity,
+        # then the publication toggle (k16)
         mid = chunk["msg_id"] & 0xFF
         cid = chunk["chunk_id"] & 0x3F
         pub = 1 if (chunk["frame_published"] and chunk["next"] == len(chunk["segments"])) else 0
@@ -183,6 +193,10 @@ class M3CacheStateChannel(ChannelAdapter):
         ] + [pub]
         parity = sum(header_bits) & 1
         header_bits.append(parity)
+        self._gen[sender] += 1
+        toggle = self._gen[sender] & 1
+        header_bits.append(toggle)  # k16
+        header_bits.append(1)  # k17 activity marker (set forever)
         # payload keys: segment bit j lands on allowed key idx[j]
         for j, k in enumerate(idx):
             want = 1 if j < len(seg) and seg[j] else 0
@@ -204,7 +218,6 @@ class M3CacheStateChannel(ChannelAdapter):
             elif not bit and present:
                 cache.delete(key)
                 self._op("cache_delete", count=1)
-        self._gen[sender] += 1
         self.update_peak_occupancy()
 
     def _post_promote(self) -> None:
@@ -218,14 +231,20 @@ class M3CacheStateChannel(ChannelAdapter):
     # ---------------------------------------------------------- receive side
 
     def _read_new_live(self, sender: int, receiver: int) -> list[F.WireFrame]:
-        gen = self._gen[sender]
-        if gen == 0 or gen == self._rx_gen[receiver][sender]:
-            return []  # no NEW publication since this receiver last read
-        self._rx_gen[receiver][sender] = gen
         cache = self._cache(receiver)  # receiver uses its own handle
         # existence probes ONLY (never len()/iteration, §12)
         state = [1 if self._key(sender, k) in cache else 0 for k in range(self.K)]
         self._op("cache_probe", count=self.K)
+        toggle = state[16]
+        if state[17] == 0:
+            # nothing was EVER published by this sender: the all-absent
+            # state is not a publication; never consume it
+            return []
+        rkey = (receiver, sender)
+        last = self._rx_toggle.get(rkey)
+        if last is not None and toggle == last:
+            return []  # no new publication since this receiver last read
+        self._rx_toggle[rkey] = toggle
         header_bits = state[:16]
         mid = 0
         for b in header_bits[:8]:
