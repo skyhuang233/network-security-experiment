@@ -1,0 +1,8 @@
+# Workspace: experiment outputs (runs, measurement logs, reports)
+workspace/
+outputs/
+runs/
+results/
+
+# Experiment artifacts
+*.jsonl.tmp

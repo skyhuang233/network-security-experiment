@@ -1,0 +1,35 @@
+[project]
+name = "network-security-experiment"
+version = "0.1.0"
+description = "Shared-storage covert-channel measurement on SILO-BENCH task agents (M1 file content / M2 directory names / M3 cache key existence)"
+readme = "README.md"
+authors = [
+    { name = "skyhuang", email = "skyhuang233@gmail.com" }
+]
+requires-python = ">=3.13"
+dependencies = [
+    "diskcache>=5.6.3,<6",
+    "httpx>=0.27",
+    "openai>=1.40",
+    "pydantic>=2.7",
+    "srsly>=2.4",
+    "tenacity>=8.3",
+]
+
+[project.scripts]
+nse = "network_security_experiment.cli:main"
+
+[dependency-groups]
+dev = [
+    "pytest>=8.0",
+]
+
+[build-system]
+requires = ["uv_build>=0.12.5,<0.13.0"]
+build-backend = "uv_build"
+
+[tool.uv.build-backend]
+module-name = "network_security_experiment"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
