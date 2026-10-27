@@ -5,10 +5,9 @@ import json
 import pytest
 
 from network_security_experiment.evaluation.metrics import compute_metrics
-from network_security_experiment.harness.engine import CaseRunConfig
-from network_security_experiment.harness.runner import build_run
+from network_security_experiment.harness.job import CaseRunConfig, build_run
 from network_security_experiment.llm import ScriptedProvider
-from network_security_experiment.tasks import generate
+from tasks import generate
 
 from .test_engine import _scripted_provider  # noqa: E402
 

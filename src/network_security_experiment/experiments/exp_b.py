@@ -28,8 +28,7 @@ from typing import Any
 from ..channels.m1_file import M1FileContentChannel
 from ..channels.m2_dirname import M2DirNameChannel
 from ..channels.m3_cache import M3CacheStateChannel
-from ..harness.engine import CaseRunConfig
-from ..harness.runner import build_policy, build_views
+from ..harness.job import CaseRunConfig, build_policy, build_views
 from ..measurement.recorder import MeasurementLog
 
 ADAPTERS = {

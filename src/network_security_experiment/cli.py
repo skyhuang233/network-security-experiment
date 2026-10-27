@@ -37,7 +37,7 @@ def _registry_path() -> Path:
 
 
 def cmd_precheck(args) -> None:
-    from .tasks.precheck import run_precheck, save_registry
+    from tasks.precheck import run_precheck, save_registry
 
     report = run_precheck(target_per_class=10)
     out = _workspace() / "precheck" / "seed-registry.json"
