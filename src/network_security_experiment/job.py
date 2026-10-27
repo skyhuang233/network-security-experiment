@@ -20,12 +20,12 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-from ..channels.base import ChannelAdapter, ChannelPolicy, ChannelView
-from ..channels.m1_file import M1FileContentChannel
-from ..channels.m2_dirname import M2DirNameChannel
-from ..channels.m3_cache import M3CacheStateChannel
-from ..llm import LLMProvider
-from ..measurement.recorder import MeasurementLog, now
+from .base import ChannelAdapter, ChannelPolicy, ChannelView
+from .llm import LLMProvider
+from .m1_file import M1FileContentChannel
+from .m2_dirname import M2DirNameChannel
+from .m3_cache import M3CacheStateChannel
+from .recorder import MeasurementLog, now
 
 SYSTEM_PROMPT_TEMPLATE = """You are a member of a multi-agent system composed of {num_agents} intelligent agents.
 

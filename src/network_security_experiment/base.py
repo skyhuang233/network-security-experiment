@@ -31,8 +31,8 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from typing import Any
 
-from ..measurement.recorder import MeasurementLog, StorageOp, now
-from ..protocol import frame as F
+from . import frame as F
+from .recorder import MeasurementLog, StorageOp, now
 
 
 def hamming_distance(a: bytes, b: bytes) -> int:

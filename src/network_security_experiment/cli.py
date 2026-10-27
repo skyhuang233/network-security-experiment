@@ -51,7 +51,7 @@ def cmd_precheck(args) -> None:
 
 
 def cmd_exp_a(args) -> None:
-    from .experiments.exp_a import run_batch, run_negative_control
+    from .exp_a import run_batch, run_negative_control
 
     registry = _registry_path()
     provider = provider_from_env()
@@ -83,7 +83,7 @@ def cmd_exp_a(args) -> None:
 
 
 def cmd_exp_b(args) -> None:
-    from .experiments.exp_b import achievable_capacity, calibrate
+    from .exp_b import achievable_capacity, calibrate
 
     points = calibrate(workspace=_workspace() / "exp_b")
     cap = achievable_capacity(points, ber_threshold=args.ber_threshold)
@@ -109,7 +109,7 @@ def cmd_exp_b(args) -> None:
 
 
 def cmd_exp_c(args) -> None:
-    from .experiments.exp_c import persistence_curve, summarize_curve
+    from .exp_c import persistence_curve, summarize_curve
 
     results = {}
     for method in args.methods:
@@ -136,7 +136,7 @@ def cmd_exp_c(args) -> None:
 
 
 def cmd_exp_d_audit(args) -> None:
-    from .experiments.exp_d import evaluate_w
+    from .exp_d import evaluate_w
 
     run_dirs = [Path(p) for p in args.run_dirs]
     w = provider_from_env()
@@ -151,7 +151,7 @@ def cmd_exp_d_audit(args) -> None:
 
 
 def cmd_exp_d_isolation(args) -> None:
-    from .experiments.exp_d import run_isolation_comparison
+    from .exp_d import run_isolation_comparison
 
     provider = provider_from_env()
     comp = run_isolation_comparison(

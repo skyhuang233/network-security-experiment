@@ -2,7 +2,7 @@
 
 import pytest
 
-from network_security_experiment.experiments.exp_c import (
+from network_security_experiment.exp_c import (
     m3_single_publication_payload_len,
     persistence_curve,
     persistence_point,
@@ -40,9 +40,9 @@ def test_m3_ttl_passive_expiry_loses_message(tmp_path):
 
     time.sleep(0.1)
     # re-read with a fresh decoder after expiry
-    from network_security_experiment.channels.m3_cache import M3CacheStateChannel
-    from network_security_experiment.harness.job import CaseRunConfig, build_policy, build_views
-    from network_security_experiment.measurement.recorder import MeasurementLog
+    from network_security_experiment.m3_cache import M3CacheStateChannel
+    from network_security_experiment.job import CaseRunConfig, build_policy, build_views
+    from network_security_experiment.recorder import MeasurementLog
 
     cfg = CaseRunConfig(
         case_run_id="ttl-rx", case_id="p", seed=0, method="M3",

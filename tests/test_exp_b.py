@@ -2,7 +2,7 @@
 
 import pytest
 
-from network_security_experiment.experiments.exp_b import (
+from network_security_experiment.exp_b import (
     achievable_capacity,
     calibrate,
 )

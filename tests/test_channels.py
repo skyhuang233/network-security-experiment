@@ -8,11 +8,11 @@ import shutil
 
 import pytest
 
-from network_security_experiment.channels.m1_file import M1FileContentChannel, m1_views
-from network_security_experiment.channels.m2_dirname import M2DirNameChannel
-from network_security_experiment.channels.m3_cache import M3CacheStateChannel
-from network_security_experiment.channels.base import ChannelPolicy
-from network_security_experiment.measurement.recorder import MeasurementLog
+from network_security_experiment.m1_file import M1FileContentChannel, m1_views
+from network_security_experiment.m2_dirname import M2DirNameChannel
+from network_security_experiment.m3_cache import M3CacheStateChannel
+from network_security_experiment.base import ChannelPolicy
+from network_security_experiment.recorder import MeasurementLog
 
 
 @pytest.fixture(autouse=True)

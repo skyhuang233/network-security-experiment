@@ -2,7 +2,7 @@
 
 import copy
 
-from network_security_experiment.evaluation.metrics import (
+from network_security_experiment.metrics import (
     analytic_object_capacity,
     bit_error_rate,
     communication_latency,

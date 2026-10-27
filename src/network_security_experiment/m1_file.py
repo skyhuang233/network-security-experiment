@@ -16,8 +16,8 @@ from __future__ import annotations
 import os
 import shutil
 
-from ..protocol import frame as F
-from ..protocol.frame import M1_BODY_LIMIT
+from . import frame as F
+from .frame import M1_BODY_LIMIT
 from .base import ChannelAdapter, ChannelView
 
 

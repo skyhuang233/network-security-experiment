@@ -14,22 +14,23 @@ Design doc: [`.scratch/experiment-design-plan.md`](.scratch/experiment-design-pl
 
 ```
 src/network_security_experiment/
-  protocol/frame.py        unified logical frame (msg_id/chunk_id/total_chunks/
+  frame.py                 unified logical frame (msg_id/chunk_id/total_chunks/
                            frame_published/CRC-16; 64B baseline chunks)
-  channels/                M1 file content, M2 base32 dir names, M3 DiskCache
-                           key existence; unified send_payload/receive;
-                           ChannelPolicy for experiment D isolation controls
-  measurement/recorder.py  dual interception: send-side truth + decode
+  base.py, m1_file.py,     M1 file content, M2 base32 dir names, M3 DiskCache
+  m2_dirname.py,           key existence; unified send_payload/receive;
+  m3_cache.py              ChannelPolicy for experiment D isolation controls
+  recorder.py              dual interception: send-side truth + decode
                            candidates (pre-integrity-drop) + storage ops
-  harness/job.py           deterministic coordinator: round loop (publish this
+  job.py                   deterministic coordinator: round loop (publish this
                            round, read next round), XML tool calls, submit /
                            max-rounds termination
-  evaluation/metrics.py    the seven metrics (§8)
-  monitor/audit.py         W: 10-round windows, content/extended views,
+  metrics.py               the seven metrics (§8)
+  audit.py                 W: 10-round windows, content/extended views,
                            measurement-layer labels, TPR/FPR, run-level split
-  experiments/             A (main comparison + negative/direct controls),
-                           B (capacity calibration), C (persistence/TTL/
-                           interference), D (W audit + isolation controls)
+  exp_a.py                 A (main comparison + negative/direct controls)
+  exp_b.py                 B (capacity calibration)
+  exp_c.py                 C (persistence/TTL/interference)
+  exp_d.py                 D (W audit + isolation controls)
   cli.py                   `nse` entry point
 tasks/                     30 SILO classes ported to parameterized seeds,
                            local answer oracles, §11 dependency precheck
@@ -77,7 +78,7 @@ are never usable as recorded experiment data.
   (`(K − 18 − 32)/8` payload bytes at K): multi-segment messages require
   reading every round; a sender that stops refreshing leaves only the last
   publication on the key set.  This is the carrier's structural property
-  (§6 note), documented in `experiments/exp_c.py`.
+  (§6 note), documented in `exp_c.py`.
 
 ## References
 

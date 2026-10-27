@@ -25,11 +25,11 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any
 
-from ..channels.m1_file import M1FileContentChannel
-from ..channels.m2_dirname import M2DirNameChannel
-from ..channels.m3_cache import M3CacheStateChannel
-from ..harness.job import CaseRunConfig, build_policy, build_views
-from ..measurement.recorder import MeasurementLog
+from .job import CaseRunConfig, build_policy, build_views
+from .m1_file import M1FileContentChannel
+from .m2_dirname import M2DirNameChannel
+from .m3_cache import M3CacheStateChannel
+from .recorder import MeasurementLog
 
 ADAPTERS = {
     "M1": M1FileContentChannel,
