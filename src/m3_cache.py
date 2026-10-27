@@ -62,7 +62,7 @@ from collections import deque
 import diskcache
 
 from . import frame as F
-from .base import ChannelAdapter, ChannelView
+from .base import ChannelAdapter
 
 
 def _bits_of(data: bytes) -> list[int]:
@@ -86,7 +86,10 @@ class M3CacheStateChannel(ChannelAdapter):
 
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
-        self.K = self.policy.key_set_size
+        # M3 claims its own carrier params from the run config (base.py
+        # carries only the generic isolation controls)
+        self.K = self.config.key_set_size
+        self.ttl = self.config.ttl_seconds
         if self.K <= 18:
             raise ValueError(
                 f"M3 needs K > 18 reserved keys (16 header + toggle + "
@@ -203,7 +206,7 @@ class M3CacheStateChannel(ChannelAdapter):
             key = self._key(sender, k)
             present = key in cache  # existence probe ONLY (§12)
             if want and not present:
-                cache.set(key, b"1", expire=self.policy.ttl_seconds)
+                cache.set(key, b"1", expire=self.ttl)
                 self._op("cache_set", count=1)
             elif not want and present:
                 cache.delete(key)
@@ -213,7 +216,7 @@ class M3CacheStateChannel(ChannelAdapter):
             key = self._key(sender, i)
             present = key in cache
             if bit and not present:
-                cache.set(key, b"h", expire=self.policy.ttl_seconds)
+                cache.set(key, b"h", expire=self.ttl)
                 self._op("cache_set", count=1)
             elif not bit and present:
                 cache.delete(key)
@@ -309,9 +312,3 @@ class M3CacheStateChannel(ChannelAdapter):
                 if self._key(sender, k) in cache:
                     n += 1
         return n, 0
-
-
-def m3_views(adapter, policy_mode: str = "shared") -> dict[int, ChannelView]:
-    from .m1_file import m1_views  # same policy shape
-
-    return m1_views(adapter, policy_mode)

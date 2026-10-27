@@ -18,7 +18,7 @@ import shutil
 
 from . import frame as F
 from .frame import M1_BODY_LIMIT
-from .base import ChannelAdapter, ChannelView
+from .base import ChannelAdapter
 
 
 class M1FileContentChannel(ChannelAdapter):
@@ -98,22 +98,3 @@ class M1FileContentChannel(ChannelAdapter):
     def _occupancy(self) -> tuple[int, int]:
         n = sum(s + 1 for s in self._max_live_slot.values())
         return n, sum(self._live_bytes.values())
-
-
-def m1_views(
-    adapter: M1FileContentChannel, policy_mode: str = "shared"
-) -> dict[int, ChannelView]:
-    """Build per-agent policy-aware views (experiment D controls)."""
-    views = {}
-    for i in range(adapter.num_agents):
-        if policy_mode == "separated":
-            can_read = frozenset({i})  # own backend only: no cross visibility
-            dropped = False
-        elif policy_mode == "receiver_readonly" and i == 1:
-            can_read = frozenset({0, 1})  # B still sees A's state
-            dropped = True  # but B's writes go nowhere
-        else:
-            can_read = frozenset(range(adapter.num_agents))
-            dropped = False
-        views[i] = ChannelView(agent_id=i, adapter=adapter, can_read_senders=can_read, writes_dropped=dropped)
-    return views

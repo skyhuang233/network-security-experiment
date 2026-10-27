@@ -1,4 +1,4 @@
-"""Experiment configuration: versions, model bindings, open items (§15).
+"""§15 experiment environment configuration.
 
 Values come from environment variables so the code is repo-stable and the
 run artifacts record the resolved configuration.
@@ -29,7 +29,7 @@ def resolved_config() -> dict[str, Any]:
 
 def silo_bench_commit() -> str | None:
     """§15.1: record the referenced silo-bench git commit."""
-    repo = Path(__file__).resolve().parents[3] / "references/silo-bench/acl26-silo-bench"
+    repo = Path(__file__).resolve().parents[1] / "references/silo-bench/acl26-silo-bench"
     if not (repo / ".git").exists():
         return None
     try:
