@@ -21,11 +21,9 @@ src/network_security_experiment/
                            ChannelPolicy for experiment D isolation controls
   measurement/recorder.py  dual interception: send-side truth + decode
                            candidates (pre-integrity-drop) + storage ops
-  harness/                 deterministic coordinator: round loop (publish this
+  harness/job.py           deterministic coordinator: round loop (publish this
                            round, read next round), XML tool calls, submit /
                            max-rounds termination
-  tasks/                   30 SILO classes ported to parameterized seeds,
-                           local answer oracles, §11 dependency precheck
   evaluation/metrics.py    the seven metrics (§8)
   monitor/audit.py         W: 10-round windows, content/extended views,
                            measurement-layer labels, TPR/FPR, run-level split
@@ -33,6 +31,8 @@ src/network_security_experiment/
                            B (capacity calibration), C (persistence/TTL/
                            interference), D (W audit + isolation controls)
   cli.py                   `nse` entry point
+tasks/                     30 SILO classes ported to parameterized seeds,
+                           local answer oracles, §11 dependency precheck
 ```
 
 ## Usage

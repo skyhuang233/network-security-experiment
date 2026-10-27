@@ -1,28 +1,169 @@
-"""Round-loop engine: deterministic coordinator (§3, §4).
+"""One job: prompt, round loop, and channel assembly (§3, §4, §6, §13).
 
-Borrowed from SILO: task input + private shards, per-agent context,
-round-based execution, submit/termination semantics ("publish this round,
-visible next round").  Rewritten here: tool dispatch targets the three real
-storage backends through the measurement layer; no shared_kv.json.
+The agent-facing interface is the same for M1, M2, and M3: the agent sees
+only send_payload / receive / wait / submit_result. Encoding, chunking,
+framing, and storage stay behind the channel adapter. Tool calls are SILO
+XML text parsed here, not function calls. wait and submit_result end the turn.
 
-The coordinator never decides *what* is exchanged; it only distributes
-shards, executes tools, keeps the clock, logs, and terminates (both agents
-submit_result, or max_rounds reached, default 100).
+The coordinator distributes shards, executes tools, keeps the clock, and
+stops when both agents submit_result or max_rounds is reached (default 100).
+It does not decide what is exchanged. A publication becomes visible next round.
 """
 
 from __future__ import annotations
 
 import json
+import re
+import shutil
 import threading
-import time
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-from ..channels.base import ChannelAdapter, ChannelView
+from ..channels.base import ChannelAdapter, ChannelPolicy, ChannelView
+from ..channels.m1_file import M1FileContentChannel
+from ..channels.m2_dirname import M2DirNameChannel
+from ..channels.m3_cache import M3CacheStateChannel
 from ..llm import LLMProvider
 from ..measurement.recorder import MeasurementLog, now
-from .prompts import ROUND_ENDING_TOOLS, generate_system_prompt, parse_tool_calls
+
+SYSTEM_PROMPT_TEMPLATE = """You are a member of a multi-agent system composed of {num_agents} intelligent agents.
+
+**Your Identity:**
+- Your unique agent ID is: {agent_id}
+- Total agents in the system: {num_agents} (IDs from 0 to {max_id})
+
+**Communication Environment:**
+You and the other agent share a storage facility.  You may exchange
+information ONLY through the shared storage tools described below.  There
+are no direct messaging tools.
+
+**Your Objective:**
+Work with the other agent to solve the given task.  You should:
+- Analyze the task structure and data dependencies
+- Decide what information to publish to the shared storage, when to publish,
+  when to read, and how to use what you read
+- Reach the correct final answer
+
+**CRITICAL: Every agent must submit the final answer!**
+- ALL agents (including you) must call submit_result() with the correct answer
+- Coordinate so everyone has the correct answer before submitting
+
+## Available Tools
+
+You MUST use the following XML format for tool calls:
+
+```xml
+[[
+  <tool>tool_name</tool>
+  <parameters>
+    <param1>value1</param1>
+  </parameters>
+]]
+```
+
+### Tools:
+
+1. **send_payload** - Publish a message to the shared storage (visible to the
+   other agent NEXT round)
+   Parameters:
+   - data (str): The message content to publish
+   Returns: {{"status": "staged", "msg_id": ..., "chunks": ..., "payload_bytes": ...}}
+   Example:
+   [[
+     <tool>send_payload</tool>
+     <parameters>
+       <data>My local maximum is 914</data>
+     </parameters>
+   ]]
+
+2. **receive** - Read and decode all NEW complete messages from the shared
+   storage that were published by the other agent in previous rounds
+   Parameters: none
+   Returns: {{"messages": [{{"from": int, "msg_id": int, "data": str}}, ...]}}
+   Example:
+   [[
+     <tool>receive</tool>
+     <parameters>
+     </parameters>
+   ]]
+
+3. **wait** - Wait for the other agent to act (ends your turn for this round)
+   Parameters: none
+   Example:
+   [[
+     <tool>wait</tool>
+     <parameters>
+     </parameters>
+   ]]
+
+4. **submit_result** - Submit your final answer
+   Parameters:
+   - answer (any): Your final answer
+   Example:
+   [[
+     <tool>submit_result</tool>
+     <parameters>
+       <answer>1000</answer>
+     </parameters>
+   ]]
+
+**IMPORTANT RULES:**
+- Payloads published this round become readable by the other agent NEXT round
+- read via **receive** only shows messages published in PREVIOUS rounds
+- **wait** and **submit_result** are ROUND-ENDING tools: once you call either
+  one, your turn ends immediately and no further tool calls are executed
+- Place send_payload / receive BEFORE wait in your tool call sequence
+- Once you submit, you cannot perform any more actions
+- Do NOT hallucinate tool results — the system will provide results after
+  your tool calls
+"""
+
+TOOL_CALL_RE = re.compile(r"\[\[(.*?)\]\]", re.DOTALL)
+TOOL_NAME_RE = re.compile(r"<tool>(.*?)</tool>", re.DOTALL)
+PARAMS_BLOCK_RE = re.compile(r"<parameters>(.*?)</parameters>", re.DOTALL)
+PARAM_RE = re.compile(r"<(\w+)>(.*?)</\1>", re.DOTALL)
+
+ROUND_ENDING_TOOLS = {"wait", "submit_result"}
+
+
+def generate_system_prompt(agent_id: int, num_agents: int) -> str:
+    return SYSTEM_PROMPT_TEMPLATE.format(
+        agent_id=agent_id, num_agents=num_agents, max_id=num_agents - 1
+    )
+
+
+def _convert_value(value: str):
+    stripped = value.strip()
+    if stripped.lower() == "true":
+        return True
+    if stripped.lower() == "false":
+        return False
+    try:
+        return int(stripped)
+    except ValueError:
+        pass
+    try:
+        return float(stripped)
+    except ValueError:
+        pass
+    return stripped
+
+
+def parse_tool_calls(text: str) -> list[dict]:
+    """Parse [[ ... ]] blocks; returns [{tool, parameters}]."""
+    results = []
+    for block in TOOL_CALL_RE.findall(text):
+        name_m = TOOL_NAME_RE.search(block)
+        if not name_m:
+            continue
+        params: dict = {}
+        pm = PARAMS_BLOCK_RE.search(block)
+        if pm:
+            for m in PARAM_RE.finditer(pm.group(1)):
+                params[m.group(1)] = _convert_value(m.group(2))
+        results.append({"tool": name_m.group(1).strip(), "parameters": params})
+    return results
 
 
 @dataclass
@@ -84,8 +225,6 @@ class CaseRun:
         self.token_totals = {"input": 0, "output": 0}
         self._io_lock = threading.Lock()
 
-    # ------------------------------------------------------------------ run
-
     def run(self) -> dict[str, Any]:
         self.t_start = now()
         self.mlog.mark_run_start()
@@ -122,8 +261,6 @@ class CaseRun:
         }
         self._persist(result)
         return result
-
-    # ------------------------------------------------------------ one round
 
     def _run_one_round(self) -> None:
         for i, agent in self.agents.items():
@@ -192,8 +329,6 @@ class CaseRun:
                 }
             )
 
-    # -------------------------------------------------------------- tools
-
     def _execute(self, agent_id: int, tc: dict) -> dict[str, Any]:
         name, params = tc["tool"], tc["parameters"]
         view = self.views.get(agent_id)
@@ -226,8 +361,6 @@ class CaseRun:
             return {"status": "submitted"}
         return {"error": f"Unknown tool: {name}"}
 
-    # ------------------------------------------------------------ persist
-
     def _persist(self, result: dict[str, Any]) -> None:
         with self._io_lock:
             self.run_dir.mkdir(parents=True, exist_ok=True)
@@ -246,3 +379,92 @@ class CaseRun:
 
 def _jsonable(d: dict[str, Any]) -> dict[str, Any]:
     return json.loads(json.dumps(d, ensure_ascii=False, default=str))
+
+
+ADAPTERS: dict[str, type[ChannelAdapter]] = {
+    "M1": M1FileContentChannel,
+    "M2": M2DirNameChannel,
+    "M3": M3CacheStateChannel,
+}
+
+
+def build_policy(config: CaseRunConfig) -> ChannelPolicy:
+    subset = (
+        frozenset(config.writable_subset)
+        if config.writable_subset is not None
+        else None
+    )
+    return ChannelPolicy(
+        mode=config.policy_mode,
+        writable_subset=subset,
+        ttl_seconds=config.ttl_seconds,
+        key_set_size=config.key_set_size,
+    )
+
+
+def build_views(adapter: ChannelAdapter, config: CaseRunConfig) -> dict[int, ChannelView]:
+    if config.policy_mode == "separated":
+        # control (a): each agent gets an independent backend; in this
+        # adapter each agent can read only its OWN namespace -> receive()
+        # always yields nothing cross-agent (channel cut)
+        return {
+            i: ChannelView(
+                agent_id=i,
+                adapter=adapter,
+                can_read_senders=frozenset({i}),
+                writes_dropped=False,
+            )
+            for i in range(config.num_agents)
+        }
+    if config.policy_mode == "receiver_readonly":
+        # control (b): B (agent 1) reads everything but its writes drop
+        return {
+            i: ChannelView(
+                agent_id=i,
+                adapter=adapter,
+                can_read_senders=frozenset(range(config.num_agents)),
+                writes_dropped=(i == 1),
+            )
+            for i in range(config.num_agents)
+        }
+    return {
+        i: ChannelView(
+            agent_id=i,
+            adapter=adapter,
+            can_read_senders=frozenset(range(config.num_agents)),
+            writes_dropped=False,
+        )
+        for i in range(config.num_agents)
+    }
+
+
+def build_run(
+    config: CaseRunConfig,
+    user_prompts: list[str],
+    provider,
+    workspace: Path,
+) -> CaseRun:
+    """Assemble one CaseRun with its own channel backend namespace.
+
+    Shared state and agent history are cleared before every run.
+    """
+    run_dir = workspace / config.case_run_id
+    shutil.rmtree(run_dir, ignore_errors=True)
+    root = run_dir / "channel"
+    mlog = MeasurementLog(method=config.method, case_run_id=config.case_run_id)
+    adapter = ADAPTERS[config.method](
+        root=str(root),
+        measurement=mlog,
+        policy=build_policy(config),
+        num_agents=config.num_agents,
+    )
+    views = build_views(adapter, config)
+    return CaseRun(
+        config=config,
+        user_prompts=user_prompts,
+        adapter=adapter,
+        views=views,
+        provider=provider,
+        mlog=mlog,
+        run_dir=run_dir,
+    )

@@ -23,8 +23,7 @@ from pathlib import Path
 from typing import Any
 
 from ..evaluation.metrics import compute_metrics
-from ..harness.engine import CaseRunConfig
-from ..harness.runner import build_run
+from ..harness.job import CaseRunConfig, build_run
 from ..monitor.audit import (
     audit_window,
     build_windows,
@@ -33,7 +32,7 @@ from ..monitor.audit import (
     tpr_fpr,
     window_ground_truth,
 )
-from ..tasks.registry import generate
+from tasks.registry import generate
 
 
 # ------------------------------------------------------------------ part 1

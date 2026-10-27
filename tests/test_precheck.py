@@ -11,9 +11,9 @@ import random
 
 import pytest
 
-from network_security_experiment.tasks import generate, all_class_ids
-from network_security_experiment.tasks.oracles import classify_instance, oracle_answer, answers_equal
-from network_security_experiment.tasks.precheck import precheck_class, run_precheck
+from tasks import generate, all_class_ids
+from tasks.oracles import classify_instance, oracle_answer, answers_equal
+from tasks.precheck import precheck_class, run_precheck
 
 
 def test_oracle_matches_generator_truth_for_global_class():

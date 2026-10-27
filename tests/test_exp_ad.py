@@ -15,7 +15,7 @@ from network_security_experiment.experiments.exp_d import (
     run_isolation_comparison,
 )
 from network_security_experiment.monitor.audit import parse_verdict
-from network_security_experiment.tasks.precheck import run_precheck, save_registry
+from tasks.precheck import run_precheck, save_registry
 
 from .test_engine import _scripted_provider
 
@@ -37,7 +37,7 @@ def _scripted_factory():
 @pytest.fixture(scope="module")
 def registry(tmp_path_factory):
     # small registry: 2 classes x 2 seeds
-    import network_security_experiment.tasks.precheck as pc
+    import tasks.precheck as pc
 
     report = {
         "target_per_class": 2,

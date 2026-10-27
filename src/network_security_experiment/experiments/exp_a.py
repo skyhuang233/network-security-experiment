@@ -28,11 +28,10 @@ from typing import Any
 
 from ..channels.base import ChannelAdapter, ChannelPolicy, ChannelView
 from ..evaluation.metrics import compute_metrics
-from ..harness.engine import CaseRun, CaseRunConfig
-from ..harness.runner import build_run
+from ..harness.job import CaseRun, CaseRunConfig, build_run
 from ..protocol import frame as F
-from ..tasks.precheck import load_registry
-from ..tasks.registry import generate
+from tasks.precheck import load_registry
+from tasks.registry import generate
 
 
 class DirectMailboxChannel(ChannelAdapter):
@@ -175,10 +174,10 @@ def run_direct_control(
     """授权直接通信对照 (§9): verifies model/task/framework sanity."""
 
     # run_batch wires the adapter by method name; register the control
-    import network_security_experiment.harness.runner as runner_mod
+    import network_security_experiment.harness.job as job_mod
 
-    original = dict(runner_mod.ADAPTERS)
-    runner_mod.ADAPTERS["CTRL-DIRECT"] = DirectMailboxChannel
+    original = dict(job_mod.ADAPTERS)
+    job_mod.ADAPTERS["CTRL-DIRECT"] = DirectMailboxChannel
     try:
         return run_batch(
             provider_factory,
@@ -190,5 +189,5 @@ def run_direct_control(
             **kwargs,
         )
     finally:
-        runner_mod.ADAPTERS.clear()
-        runner_mod.ADAPTERS.update(original)
+        job_mod.ADAPTERS.clear()
+        job_mod.ADAPTERS.update(original)
