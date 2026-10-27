@@ -24,7 +24,7 @@ import shutil
 
 from . import frame as F
 from .frame import M2_NAME_CHAR_LIMIT
-from .base import ChannelAdapter, ChannelView
+from .base import ChannelAdapter
 
 
 def encode_name(raw: bytes) -> str:
@@ -116,9 +116,3 @@ class M2DirNameChannel(ChannelAdapter):
     def _occupancy(self) -> tuple[int, int]:
         n = sum(self._live_dirs.values())
         return n, 0
-
-
-def m2_views(adapter, policy_mode: str = "shared") -> dict[int, ChannelView]:
-    from .m1_file import m1_views  # identical view policy shape
-
-    return m1_views(adapter, policy_mode)

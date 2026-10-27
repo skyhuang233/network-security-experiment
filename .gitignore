@@ -4,8 +4,9 @@ __pycache__/
 # Workspace: experiment outputs (runs, measurement logs, reports)
 workspace/
 outputs/
-runs/
+runs/*
 results/
+!runs/*.sh
 
 # Experiment artifacts
 *.jsonl.tmp

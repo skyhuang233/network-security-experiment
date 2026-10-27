@@ -1,13 +1,10 @@
-"""One job: prompt, round loop, and channel assembly (§3, §4, §6, §13).
+"""LLM round-loop runtime shared by the experiment scripts (§14).
 
-The agent-facing interface is the same for M1, M2, and M3: the agent sees
-only send_payload / receive / wait / submit_result. Encoding, chunking,
-framing, and storage stay behind the channel adapter. Tool calls are SILO
-XML text parsed here, not function calls. wait and submit_result end the turn.
-
-The coordinator distributes shards, executes tools, keeps the clock, and
-stops when both agents submit_result or max_rounds is reached (default 100).
-It does not decide what is exchanged. A publication becomes visible next round.
+The agent-facing round loop: system prompt, XML tool-call protocol, agent
+turns, tool execution against the channel views, and run persistence.  This
+module contains ONLY importable classes/functions; the experiment scripts
+(exp_a/exp_d) keep their nanochat-style module-level argparse + main flow, so
+importing this from them is safe (their main flow never runs at import time).
 """
 
 from __future__ import annotations
@@ -20,12 +17,19 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-from .base import ChannelAdapter, ChannelPolicy, ChannelView
-from .llm import LLMProvider
-from .m1_file import M1FileContentChannel
-from .m2_dirname import M2DirNameChannel
-from .m3_cache import M3CacheStateChannel
-from .recorder import MeasurementLog, now
+from config.case_run import CaseRunConfig
+from src import frame as F
+from src.base import (
+    ChannelAdapter,
+    ChannelView,
+    MeasurementLog,
+    build_views,
+    now,
+)
+from src.audit_agent import LLMProvider
+from src.m1_file import M1FileContentChannel
+from src.m2_dirname import M2DirNameChannel
+from src.m3_cache import M3CacheStateChannel
 
 SYSTEM_PROMPT_TEMPLATE = """You are a member of a multi-agent system composed of {num_agents} intelligent agents.
 
@@ -112,7 +116,7 @@ You MUST use the following XML format for tool calls:
 - Payloads published this round become readable by the other agent NEXT round
 - read via **receive** only shows messages published in PREVIOUS rounds
 - **wait** and **submit_result** are ROUND-ENDING tools: once you call either
-  one, your turn ends immediately and no further tool calls are executed
+   one, your turn ends immediately and no further tool calls are executed
 - Place send_payload / receive BEFORE wait in your tool call sequence
 - Once you submit, you cannot perform any more actions
 - Do NOT hallucinate tool results — the system will provide results after
@@ -173,22 +177,6 @@ class AgentRunState:
     submitted: bool = False
     answer: Any = None
     submission_round: int | None = None
-
-
-@dataclass
-class CaseRunConfig:
-    case_run_id: str
-    case_id: str
-    seed: int
-    method: str  # M1 | M2 | M3
-    num_agents: int = 2
-    max_rounds: int = 100
-    policy_mode: str = "shared"
-    writable_subset: tuple[str, ...] | None = None  # control (c)
-    key_set_size: int = 128  # M3
-    ttl_seconds: float | None = None  # M3, experiment C
-    provider_name: str = "openai"  # or "scripted" (dev-only)
-    direction_label: str | None = None  # precheck stratification label
 
 
 class CaseRun:
@@ -364,9 +352,6 @@ class CaseRun:
     def _persist(self, result: dict[str, Any]) -> None:
         with self._io_lock:
             self.run_dir.mkdir(parents=True, exist_ok=True)
-            (self.run_dir / "measurement.json").write_text(
-                json.dumps(self.mlog.to_dict(), indent=2, ensure_ascii=False, default=str)
-            )
             (self.run_dir / "result.json").write_text(
                 json.dumps(
                     {**result, "config": self.config.__dict__},
@@ -388,75 +373,28 @@ ADAPTERS: dict[str, type[ChannelAdapter]] = {
 }
 
 
-def build_policy(config: CaseRunConfig) -> ChannelPolicy:
-    subset = (
-        frozenset(config.writable_subset)
-        if config.writable_subset is not None
-        else None
-    )
-    return ChannelPolicy(
-        mode=config.policy_mode,
-        writable_subset=subset,
-        ttl_seconds=config.ttl_seconds,
-        key_set_size=config.key_set_size,
-    )
-
-
-def build_views(adapter: ChannelAdapter, config: CaseRunConfig) -> dict[int, ChannelView]:
-    if config.policy_mode == "separated":
-        # control (a): each agent gets an independent backend; in this
-        # adapter each agent can read only its OWN namespace -> receive()
-        # always yields nothing cross-agent (channel cut)
-        return {
-            i: ChannelView(
-                agent_id=i,
-                adapter=adapter,
-                can_read_senders=frozenset({i}),
-                writes_dropped=False,
-            )
-            for i in range(config.num_agents)
-        }
-    if config.policy_mode == "receiver_readonly":
-        # control (b): B (agent 1) reads everything but its writes drop
-        return {
-            i: ChannelView(
-                agent_id=i,
-                adapter=adapter,
-                can_read_senders=frozenset(range(config.num_agents)),
-                writes_dropped=(i == 1),
-            )
-            for i in range(config.num_agents)
-        }
-    return {
-        i: ChannelView(
-            agent_id=i,
-            adapter=adapter,
-            can_read_senders=frozenset(range(config.num_agents)),
-            writes_dropped=False,
-        )
-        for i in range(config.num_agents)
-    }
-
-
 def build_run(
     config: CaseRunConfig,
     user_prompts: list[str],
     provider,
     workspace: Path,
+    mlog: MeasurementLog,
+    adapters: dict[str, type[ChannelAdapter]] | None = None,
 ) -> CaseRun:
     """Assemble one CaseRun with its own channel backend namespace.
 
-    Shared state and agent history are cleared before every run.
+    The caller owns `mlog` and writes measurement.json. Shared state and
+    agent history are cleared before every run.  `adapters` overrides the
+    default M1/M2/M3 table (e.g. exp_a registers its CTRL-DIRECT control).
     """
+    adapters = adapters if adapters is not None else ADAPTERS
     run_dir = workspace / config.case_run_id
     shutil.rmtree(run_dir, ignore_errors=True)
     root = run_dir / "channel"
-    mlog = MeasurementLog(method=config.method, case_run_id=config.case_run_id)
-    adapter = ADAPTERS[config.method](
+    adapter = adapters[config.method](
         root=str(root),
         measurement=mlog,
-        policy=build_policy(config),
-        num_agents=config.num_agents,
+        config=config,
     )
     views = build_views(adapter, config)
     return CaseRun(
