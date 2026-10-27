@@ -13,48 +13,63 @@ Design doc: [`.scratch/experiment-design-plan.md`](.scratch/experiment-design-pl
 ## Layout
 
 ```
-src/network_security_experiment/
+src/
   frame.py                 unified logical frame (msg_id/chunk_id/total_chunks/
                            frame_published/CRC-16; 64B baseline chunks)
-  base.py, m1_file.py,     M1 file content, M2 base32 dir names, M3 DiskCache
-  m2_dirname.py,           key existence; unified send_payload/receive;
-  m3_cache.py              ChannelPolicy for experiment D isolation controls
-  recorder.py              dual interception: send-side truth + decode
-                           candidates (pre-integrity-drop) + storage ops
-  job.py                   deterministic coordinator: round loop (publish this
-                           round, read next round), XML tool calls, submit /
-                           max-rounds termination
+  base.py                  shared agent-facing machinery (chunking/framing/
+                           round visibility/reassembly/measurement) + the
+                           GENERIC isolation policy (experiment D controls);
+                           build_views bridges CaseRunConfig -> per-agent views
+  m1_file.py,              M1 file content, M2 base32 dir names, M3 DiskCache
+  m2_dirname.py,           key existence; each carrier owns its physical layer
+  m3_cache.py              (staging/promotion/reading) and claims its own
+                           carrier params (M3 K/TTL, body/name limits) from
+                           CaseRunConfig at construction
   metrics.py               the seven metrics (§8)
-  audit.py                 W: 10-round windows, content/extended views,
-                           measurement-layer labels, TPR/FPR, run-level split
-  exp_a.py                 A (main comparison + negative/direct controls)
-  exp_b.py                 B (capacity calibration)
-  exp_c.py                 C (persistence/TTL/interference)
-  exp_d.py                 D (W audit + isolation controls)
-  cli.py                   `nse` entry point
-tasks/                     30 SILO classes ported to parameterized seeds,
-                           local answer oracles, §11 dependency precheck
+  audit_agent.py           W: 10-round windows, content/extended views,
+                           measurement-layer labels, TPR/FPR, run-level split;
+                           also the OpenAI-compatible LLM client (§13)
+                           shared by A/B and W (provider_from_env,
+                           ScriptedProvider)
+  eval_cli.py              `nse` entry point (precheck registry)
+tasks/                     experiment scripts (nanochat-style standalone runs);
+  exp_a.py                 A (main comparison + negative/direct controls);
+                           opens and saves that run's measurement log
+  exp_b.py                 B (capacity calibration); owns its measurement log
+  exp_c.py                 C (persistence/TTL/interference); owns its measurement log
+  exp_d.py                 D (W audit + isolation controls); owns its measurement log
+benchmark_generator/      30 SILO classes ported to parameterized seeds
+                           (paradigm I/II/III generators, seed-parameterized);
+                           generator.py: instance assembly, local oracles,
+                           §11 dependency precheck -> seed-registry.json
+config/                    resolved run configuration (§15): model binding,
+                           K, BER threshold, stamped into every report;
+                           CaseRunConfig (per-run experiment configuration)
 ```
 
 ## Usage
 
-```bash
-uv sync
-uv run pytest                     # deterministic-core test suite (55 tests)
+Launch scripts (nanochat-style) live in `runs/`; each self-bootstraps the
+environment (uv, `.venv`, `uv sync`, activation) and runs from the repo root.
 
-uv run nse precheck               # §11 dependency precheck -> seed registry
-uv run nse exp-b                  # capacity calibration (no LLM needed)
-uv run nse exp-c                  # persistence curves (no LLM needed)
+```bash
+bash runs/exp_b.sh            # capacity calibration (no LLM needed)
+bash runs/exp_c.sh            # persistence curves (no LLM needed)
 
 # LLM runs (recorded experiments use real LLMs only, §1):
 export NSE_API_KEY=... NSE_MODEL=...          # + NSE_API_BASE if needed
-uv run nse exp-a                   # main comparison (29 classes x 10 seeds x 3 methods)
-uv run nse exp-d-isolation --case I-01 --seed 0 --method M1
-uv run nse exp-d-audit runs/main-M1-* runs/negctrl-*
+bash runs/exp_a.sh            # main comparison (29 classes x 10 seeds x 3 methods)
+bash runs/exp_d.sh isolation --case I-01 --seed 0 --method M1
+bash runs/exp_d.sh audit outputs/runs/main-M1-* outputs/runs/negctrl-*
+bash runs/full_run.sh         # entire recorded pipeline, end to end
 ```
 
+Extra args pass through to each experiment's argparse (e.g.
+`bash runs/exp_a.sh --classes I-01 --seeds-per-class 1`); long runs fit a
+screen session (`screen -L -Logfile runs/exp_a.log -S exp_a bash runs/exp_a.sh`).
+
 Configuration (model binding, K, BER threshold) resolves from environment
-variables and is stamped into every report (`config.py`, §15).  The
+variables and is stamped into every report (`config`, §15).  The
 dev-only `ScriptedProvider` replays fixed tool-call scripts to integration-
 test the plumbing; every run records its provider name, and scripted runs
 are never usable as recorded experiment data.
@@ -83,7 +98,7 @@ are never usable as recorded experiment data.
 ## References
 
 - SILO-BENCH source is pinned under `references/silo-bench/acl26-silo-bench`
-  (git commit recorded by `config.py` into each report).  Task generation,
+  (git commit recorded by `config` into each report).  Task generation,
   data sharding, round visibility semantics and the LLM client are reused;
   the round loop, tools and storage layer are rewritten per the design doc
   (§4 "new harness, reuse tasks and scheduling semantics only").
