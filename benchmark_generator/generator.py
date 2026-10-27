@@ -1,27 +1,88 @@
-"""Local answer oracles for the per-instance self-sufficiency precheck (§11).
+"""Task instances, local oracles, and the dependency precheck (§11, §14).
 
-For each task class, an oracle computes what one agent could answer using ONLY
-its own shard, following the task semantics.  Comparing the oracle answer to
-the global expected answer classifies each instance:
-
-- both agents self-sufficient  -> "degenerate"     (zero communication need;
-                                                     excluded from the study)
-- exactly one self-sufficient  -> "unidirectional" (that agent must publish;
-                                                     direction recorded)
-- neither                      -> "bidirectional"  (genuine two-way dependency)
-
-Oracles are deterministic, offline, run once before formal experiments.
-Segmented tasks (II-11, II-14, II-20, III-21) are trivially bidirectional:
-each agent's expected output is its own segment and by construction cannot be
-computed locally without neighbor data — the oracle still verifies by trying.
+`generate(case_id, seed)` builds one two-agent instance. An oracle says what
+each agent could answer from its own shard alone, and the precheck keeps only
+instances that actually require communication.
 """
 
 from __future__ import annotations
 
+import json
+import random
 import statistics
+from pathlib import Path
 from typing import Any, Callable
 
-from .registry import TaskInstance
+from .paradigm_i import PARADIGM_I
+from .paradigm_ii import PARADIGM_II
+from .paradigm_iii import PARADIGM_III
+
+ALL_CLASSES: dict[str, Any] = {**PARADIGM_I, **PARADIGM_II, **PARADIGM_III}
+
+NUM_AGENTS = 2  # fixed by §14: all 30 classes at n=2
+
+
+def _safe_format(template: str, **kwargs) -> str:
+    """Literal-replace only known placeholders; keep other braces untouched
+    (same semantics as SILO's `_safe_prompt_format`)."""
+    out = template
+    for k, v in kwargs.items():
+        out = out.replace("{" + k + "}", str(v))
+    return out
+
+
+def build_user_prompt(case: dict[str, Any], agent_id: int, num_agents: int) -> str:
+    return _safe_format(
+        case["description"],
+        agent_id=agent_id,
+        num_agents=num_agents,
+        max_id=num_agents - 1,
+        input_shard=case["input_shards"][agent_id],
+    )
+
+
+class TaskInstance:
+    """One (case_class, seed) instance with per-agent prompts and shards."""
+
+    def __init__(self, case: dict[str, Any], seed: int, num_agents: int) -> None:
+        self.case_id = case["case_id"]
+        self.case_name = case["case_name"]
+        self.paradigm = case["paradigm"]
+        self.seed = seed
+        self.num_agents = num_agents
+        self.is_segmented = case["is_segmented"]
+        self.input_shards = case["input_shards"]
+        self.expected_per_agent = case["expected_per_agent"]
+        self.user_prompts = [
+            build_user_prompt(case, i, num_agents) for i in range(num_agents)
+        ]
+        self.raw = case  # description template + unsharded data for oracles
+
+    @property
+    def instance_id(self) -> str:
+        return f"{self.case_id}_seed{self.seed:04d}_n{self.num_agents}"
+
+
+def generate(case_id: str, seed: int, num_agents: int = NUM_AGENTS) -> TaskInstance:
+    if case_id not in ALL_CLASSES:
+        raise KeyError(f"Unknown case class {case_id}")
+    rng = random.Random(_seed_int(case_id, seed))
+    case = ALL_CLASSES[case_id](rng, num_agents)
+    return TaskInstance(case, seed, num_agents)
+
+
+def _seed_int(case_id: str, seed: int) -> int:
+    """Stable per-class seed mixing: same numeric seed, different streams per
+    class (avoids accidental correlation between classes)."""
+    h = 0
+    for ch in case_id:
+        h = (h * 131 + ord(ch)) & 0xFFFFFFFF
+    return (h ^ (seed * 2654435761)) & 0xFFFFFFFF
+
+
+def all_class_ids() -> list[str]:
+    return sorted(ALL_CLASSES.keys())
+
 
 Oracle = Callable[[TaskInstance, int], Any]
 
@@ -407,3 +468,88 @@ def classify_instance(inst: TaskInstance) -> dict[str, Any]:
         "label": label,
         "direction": direction,
     }
+
+
+def precheck_class(
+    case_id: str,
+    target_per_class: int = 10,
+    seed_start: int = 0,
+    max_seeds: int = 1000,
+) -> dict[str, Any]:
+    """Sweep seeds for one class until `target_per_class` valid instances."""
+    valid: list[dict[str, Any]] = []
+    degenerate: list[dict[str, Any]] = []
+    seeds_tried = 0
+    seed = seed_start
+    while len(valid) < target_per_class and seed < seed_start + max_seeds:
+        inst = generate(case_id, seed)
+        result = classify_instance(inst)
+        result["seed_tried_index"] = seeds_tried
+        seeds_tried += 1
+        if result["label"] == "degenerate":
+            degenerate.append(result)
+        else:
+            valid.append(result)
+        seed += 1
+    return {
+        "case_id": case_id,
+        "valid_count": len(valid),
+        "seeds_tried": seeds_tried,
+        "reseeded": seeds_tried > target_per_class,
+        "structurally_degenerate": len(valid) < target_per_class,
+        "valid": valid,
+        "degenerate_excluded": degenerate,
+        "label_counts": {
+            "unidirectional": sum(1 for v in valid if v["label"] == "unidirectional"),
+            "bidirectional": sum(1 for v in valid if v["label"] == "bidirectional"),
+        },
+    }
+
+
+def run_precheck(
+    target_per_class: int = 10,
+    class_ids: list[str] | None = None,
+) -> dict[str, Any]:
+    """Full precheck over all (or selected) classes.
+
+    Classes that stay degenerate across the entire seed sweep (e.g. I-03 at
+    n=2: the forced-majority construction makes BOTH shards hold the local
+    winner, so both agents are always self-sufficient) are recorded as
+    `structurally_degenerate` and excluded from the main experiment rather
+    than infinitely reseeded (§11: the reseeding process is recorded).
+    """
+    report: dict[str, Any] = {"target_per_class": target_per_class, "classes": {}}
+    for cid in class_ids or all_class_ids():
+        report["classes"][cid] = precheck_class(cid, target_per_class)
+    report["summary"] = {
+        "classes_complete": sum(
+            1
+            for c in report["classes"].values()
+            if c["valid_count"] == target_per_class
+        ),
+        "structurally_degenerate": [
+            cid
+            for cid, c in report["classes"].items()
+            if c["structurally_degenerate"]
+        ],
+        "total_valid": sum(c["valid_count"] for c in report["classes"].values()),
+        "total_degenerate_excluded": sum(
+            len(c["degenerate_excluded"]) for c in report["classes"].values()
+        ),
+    }
+    return report
+
+
+def save_registry(report: dict[str, Any], path: str | Path) -> None:
+    """Persist the seed -> instance registry (§14 seed→instance mapping)."""
+    path = Path(path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(report, indent=2, ensure_ascii=False))
+
+
+def load_registry(path: str | Path) -> dict[str, Any]:
+    return json.loads(Path(path).read_text())
+
+
+def valid_seeds_for(report: dict[str, Any], case_id: str) -> list[int]:
+    return [entry["seed"] for entry in report["classes"][case_id]["valid"]]
