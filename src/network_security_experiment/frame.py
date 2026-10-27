@@ -12,7 +12,7 @@ embedding differs (§6):
   fixed small set of reserved keys (msg_id low bits + chunk_id +
   total_chunks low bits + frame_published + parity); the remaining keys carry
   payload bits, 1 bit per key.  The CRC-16 travels in-band as the first two
-  bytes of the M3 bit stream.  See channels/m3_cache.py.
+  bytes of the M3 bit stream.  See m3_cache.py.
 
 Frame fields (all 16-bit except the 1-bit flag, total 65 bit ~ 9 B):
     msg_id        u16  sender-side auto-increment message sequence number
@@ -42,7 +42,7 @@ HEADER_SIZE = 9  # bytes on the wire for M1/M2
 M1_BODY_LIMIT = 256  # L = 256 B fixed content limit for M1 file bodies
 M2_NAME_CHAR_LIMIT = 240  # <= 240 chars after reserving header/separator room
 
-# M3 per-publication reserved keys (see channels/m3_cache.py):
+# M3 per-publication reserved keys (see m3_cache.py):
 #   keys 0..7   msg_id low 8 bits        (8 keys)
 #   keys 8..13  chunk_id low 6 bits      (6 keys)
 #   key  14     frame_published          (1 key)

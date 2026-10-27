@@ -19,7 +19,7 @@ import time
 from dataclasses import dataclass, field
 from typing import Any
 
-from ..protocol.frame import PAYLOAD_CHUNK_SIZE
+from .frame import PAYLOAD_CHUNK_SIZE
 
 
 def now() -> float:

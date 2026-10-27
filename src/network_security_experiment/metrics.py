@@ -6,7 +6,7 @@ Metrics:
   2. effective_throughput  G = Σ_{j∈D} 8·L_j / (T_end − T_start), per direction
   3. communication_latency per-chunk t_receive − t_send, median + P95, censored
   4. bit_error_rate        Σ d_H(x_j, x̂_j) / Σ |x_j| over comparable frames
-  5. detection_tpr_fpr     (§10, monitor W; computed in monitor.audit)
+  5. detection_tpr_fpr     (§10, monitor W; computed in audit)
   6. persistence           delay-recoverability curve (experiment C driver)
   7. resource_overhead     two layers (tool calls vs storage ops) + normalized
                            per KiB correctly delivered
@@ -22,7 +22,7 @@ import copy
 import math
 from typing import Any
 
-from ..protocol.frame import M1_BODY_LIMIT, M2_NAME_CHAR_LIMIT, M3_RESERVED_KEYS
+from .frame import M1_BODY_LIMIT, M2_NAME_CHAR_LIMIT, M3_RESERVED_KEYS
 
 # ---------------------------------------------------------------- 8.1 capacity
 

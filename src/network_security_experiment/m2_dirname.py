@@ -22,8 +22,8 @@ import base64
 import binascii
 import shutil
 
-from ..protocol import frame as F
-from ..protocol.frame import M2_NAME_CHAR_LIMIT
+from . import frame as F
+from .frame import M2_NAME_CHAR_LIMIT
 from .base import ChannelAdapter, ChannelView
 
 

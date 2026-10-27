@@ -22,9 +22,9 @@ import json
 from pathlib import Path
 from typing import Any
 
-from ..evaluation.metrics import compute_metrics
-from ..harness.job import CaseRunConfig, build_run
-from ..monitor.audit import (
+from .job import CaseRunConfig, build_run
+from .metrics import compute_metrics
+from .audit import (
     audit_window,
     build_windows,
     label_windows,

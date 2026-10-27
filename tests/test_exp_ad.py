@@ -4,17 +4,17 @@ import json
 
 import pytest
 
-from network_security_experiment.experiments.exp_a import (
+from network_security_experiment.exp_a import (
     DirectMailboxChannel,
     run_batch,
     run_direct_control,
     run_negative_control,
 )
-from network_security_experiment.experiments.exp_d import (
+from network_security_experiment.exp_d import (
     evaluate_w,
     run_isolation_comparison,
 )
-from network_security_experiment.monitor.audit import parse_verdict
+from network_security_experiment.audit import parse_verdict
 from tasks.precheck import run_precheck, save_registry
 
 from .test_engine import _scripted_provider

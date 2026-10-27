@@ -9,7 +9,7 @@ import json
 
 import pytest
 
-from network_security_experiment.harness.job import CaseRunConfig, build_run
+from network_security_experiment.job import CaseRunConfig, build_run
 from network_security_experiment.llm import ScriptedProvider
 from tasks import generate
 

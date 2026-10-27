@@ -24,7 +24,7 @@ import json
 from pathlib import Path
 from typing import Any
 
-from ..llm import LLMProvider
+from .llm import LLMProvider
 
 WINDOW_ROUNDS = 10
 

@@ -61,7 +61,7 @@ from collections import deque
 
 import diskcache
 
-from ..protocol import frame as F
+from . import frame as F
 from .base import ChannelAdapter, ChannelView
 
 

@@ -2,7 +2,7 @@
 
 import pytest
 
-from network_security_experiment.protocol import frame as F
+from network_security_experiment import frame as F
 
 
 def test_crc16_known_vector():

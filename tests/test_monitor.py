@@ -3,7 +3,7 @@
 
 import json
 
-from network_security_experiment.monitor.audit import (
+from network_security_experiment.audit import (
     audit_window,
     build_windows,
     label_windows,
