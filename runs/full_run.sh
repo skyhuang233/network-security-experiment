@@ -19,10 +19,9 @@ export PATH="$HOME/.local/bin:$PATH"   # first-time uv install does not refresh 
 uv sync
 source .venv/bin/activate
 
-if [ -z "${NSE_API_KEY:-}" ] || [ -z "${NSE_MODEL:-}" ]; then
-    echo "error: NSE_API_KEY and NSE_MODEL are required for LLM experiments" >&2
-    exit 1
-fi
+# fail fast on missing env: ${VAR:?} aborts with this message on stderr
+: "${NSE_API_KEY:?NSE_API_KEY and NSE_MODEL are required for LLM experiments}"
+: "${NSE_MODEL:?NSE_API_KEY and NSE_MODEL are required for LLM experiments}"
 
 # §11 dependency precheck -> seed registry (outputs/precheck/seed-registry.json)
 nse precheck

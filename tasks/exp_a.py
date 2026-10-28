@@ -179,7 +179,7 @@ registry_path = (
     else workspace / "precheck" / "seed-registry.json"
 )
 if not registry_path.exists():
-    raise SystemExit(
+    raise FileNotFoundError(
         f"seed registry not found at {registry_path}; run `nse precheck` first"
     )
 registry = load_registry(registry_path)
