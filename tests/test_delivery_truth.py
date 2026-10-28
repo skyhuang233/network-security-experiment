@@ -229,6 +229,61 @@ class ApplicationDeliveryTest(unittest.TestCase):
             )
 
 
+class MultipleAttemptBerTest(unittest.TestCase):
+    """One representative candidate per (chunk, receiver) when a chunk was
+    read several times (issue: BER must not be accumulated over every
+    attempt — exp B previously divided total Hamming distance by
+    payload-bits-times-attempts, which diverges from the §8.4 definition
+    as soon as a chunk has more than one decode candidate)."""
+
+    def _chunk(self):
+        mlog = MeasurementLog("M1", "multi")
+        rec = mlog.register_send(
+            sender=0, msg_id=1, chunk_id=0, total_chunks=1,
+            frame_published=True, payload_len=3,
+        )
+        return mlog, rec
+
+    @staticmethod
+    def _attempt(hex_, hamming, exact, round_):
+        return {
+            "receiver": 1, "round": round_, "time": float(round_),
+            "candidate_hex": hex_, "crc_ok": True,
+            "exact_match": exact, "comparable": True,
+            "length_mismatch": False, "hamming": hamming,
+        }
+
+    def test_delivered_chunk_ignores_earlier_corrupt_attempts(self) -> None:
+        # corrupt read in round 2, correct read + delivery in round 3:
+        # the delivered candidate is the representative -> BER 0, not
+        # (4 errors) / (2 attempts x 24 bits) = 1/6
+        mlog, rec = self._chunk()
+        mlog.record_attempt(rec, self._attempt("010000", 4, False, 2))
+        mlog.record_attempt(rec, self._attempt("001021", 0, True, 3))
+        mlog.mark_delivered(rec, receiver=1, t=3.0, round_=3)
+        ber = bit_error_rate(mlog.to_dict())
+        self.assertEqual(ber["ber_total"], 0.0)
+        self.assertEqual(ber["comparable_chunk_attempts"], 1)
+
+    def test_undelivered_chunk_counts_first_comparable_candidate(self) -> None:
+        # two corrupt reads, never delivered: the FIRST comparable candidate
+        # is the representative (2/24), not the sum over attempts (7/48)
+        mlog, rec = self._chunk()
+        mlog.record_attempt(rec, self._attempt("010000", 2, False, 2))
+        mlog.record_attempt(rec, self._attempt("100000", 5, False, 3))
+        ber = bit_error_rate(mlog.to_dict())
+        self.assertAlmostEqual(ber["ber_total"], 2 / 24)
+        self.assertEqual(ber["comparable_chunk_attempts"], 1)
+
+    def test_per_direction_same_representative_rule(self) -> None:
+        mlog, rec = self._chunk()
+        mlog.record_attempt(rec, self._attempt("010000", 2, False, 2))
+        ber = bit_error_rate(mlog.to_dict())
+        self.assertEqual(
+            ber["ber_per_direction"], {"0->1": 2 / 24}
+        )
+
+
 class SendTimeOriginTest(unittest.TestCase):
     def test_each_chunk_starts_before_its_stage(self) -> None:
         payload = b"y" * (PAYLOAD_CHUNK_SIZE + 1)
