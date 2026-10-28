@@ -27,10 +27,6 @@ src/
                            CaseRunConfig at construction
   metrics.py               the seven metrics (§8) + experiment-B capacity
                            selection (highest repeatable rate per unit)
-  persistence.py           experiment-C helpers (§8.6): paired-payload
-                           provenance, per-carrier active cleanup, M3
-                           same-cache eviction-pressure background writer,
-                           repeat-estimated recoverability curves
   audit_agent.py           W: 10-round windows, content/extended views,
                            measurement-layer labels, TPR/FPR, run-level split;
                            also the OpenAI-compatible LLM client (§13)
@@ -99,9 +95,12 @@ communication, failed-transmission attempts, separated controls), capacity
 selection (highest rate, not largest payload), resource-overhead invariants
 (null occupancy for unmeasurable backends, publish-side probe counting),
 M3 logical-id addressing (out-of-range rejection, explicit wrap events),
-persistence pairing (common active cleanup on all carriers, real M3
-eviction pressure, repeat-estimated curves), and an end-to-end exp_a smoke
-test with the scripted provider.
+persistence pairing (end-to-end exp_c runs: common active cleanup on all
+carriers, real M3 eviction pressure, repeat-estimated curves, paired
+payload sha256 across methods/delays/repeats), and an end-to-end exp_a
+smoke test with the scripted provider.  The exp_c coverage drives the real
+entry point as a subprocess (the script's module-level main flow cannot be
+imported for unit testing).
 
 ## Findings baked into the implementation
 
@@ -131,7 +130,7 @@ test with the scripted provider.
   reading every round; a sender that stops refreshing leaves only the last
   publication on the key set.  This bound comes from the one-segment-per-
   round choice of this protocol implementation (§6 note), documented in
-  `exp_c.py` / `src/persistence.py` — it is not a universal property of
+  `exp_c.py` — it is not a universal property of
   cache-key existence channels.
 - **Experiment C pairing (§8.6)**: payloads are pre-generated once and
   reused byte-identically across delays, methods and repeats; common
