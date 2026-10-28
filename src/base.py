@@ -105,9 +105,6 @@ class StorageOp:
     #        cache_probe | cache_delete | promote_move | ...
     bytes_logical: int = 0  # logical bytes touched (0 for pure metadata ops)
     count: int = 1
-    detail: str = ""
-    wall: float = 0.0
-    cpu: float = 0.0
 
 
 @dataclass
@@ -130,39 +127,18 @@ class OverheadStats:
         elif op.op.endswith("read") or "probe" in op.op or "list" in op.op:
             self.logical_bytes_read += op.bytes_logical
 
-    def merge(self, other: OverheadStats) -> None:
-        self.tool_calls += other.tool_calls
-        for k, v in other.tool_calls_by_name.items():
-            self.tool_calls_by_name[k] = self.tool_calls_by_name.get(k, 0) + v
-        for k, v in other.storage_ops.items():
-            self.storage_ops[k] = self.storage_ops.get(k, 0) + v
-        self.logical_bytes_written += other.logical_bytes_written
-        self.logical_bytes_read += other.logical_bytes_read
-        self.peak_occupancy_objects = max(
-            self.peak_occupancy_objects, other.peak_occupancy_objects
-        )
-        if self.peak_occupancy_bytes is None or other.peak_occupancy_bytes is None:
-            self.peak_occupancy_bytes = None
-        else:
-            self.peak_occupancy_bytes = max(
-                self.peak_occupancy_bytes, other.peak_occupancy_bytes
-            )
-        self.cpu_time += other.cpu_time
-
 
 class MeasurementLog:
     """Central per-run measurement record.
 
-    Thread-safety: A and B run as two threads in one process (§12); a simple
-    RLock guards append-style updates.
+    CaseRun runs each agent's turn to completion on the calling thread
+    before starting the next agent.  Append-style updates run on that
+    same thread.
     """
 
     def __init__(self, method: str, case_run_id: str) -> None:
-        import threading
-
         self.method = method
         self.case_run_id = case_run_id
-        self._lock = threading.RLock()
         self.chunks: dict[str, ChunkRecord] = {}
         self.events: list[dict[str, Any]] = []  # lifecycle / round events
         self.overhead = OverheadStats()
@@ -183,19 +159,18 @@ class MeasurementLog:
         payload_len: int,
     ) -> ChunkRecord:
         key = f"{self.method}|{self.case_run_id}|{sender}|{msg_id}|{chunk_id}"
-        with self._lock:
-            rec = ChunkRecord(
-                method=self.method,
-                case_run_id=self.case_run_id,
-                sender=sender,
-                msg_id=msg_id,
-                chunk_id=chunk_id,
-                total_chunks=total_chunks,
-                frame_published=frame_published,
-                payload_len=payload_len,
-            )
-            self.chunks[key] = rec
-            return rec
+        rec = ChunkRecord(
+            method=self.method,
+            case_run_id=self.case_run_id,
+            sender=sender,
+            msg_id=msg_id,
+            chunk_id=chunk_id,
+            total_chunks=total_chunks,
+            frame_published=frame_published,
+            payload_len=payload_len,
+        )
+        self.chunks[key] = rec
+        return rec
 
     # -- attempts / delivery -------------------------------------------------
 
@@ -208,111 +183,101 @@ class MeasurementLog:
         reassembled the whole message and returned it.  An exact payload
         match on one chunk, or a CRC pass, is not that event.
         """
-        with self._lock:
-            rec.attempts.append(attempt)
+        rec.attempts.append(attempt)
 
     def mark_delivered(
         self, rec: ChunkRecord, receiver: int, t: float, round_: int
     ) -> None:
         """First correct delivery of this chunk to `receiver` (§7)."""
-        with self._lock:
-            if receiver not in rec.delivered:
-                rec.delivered[receiver] = True
-                rec.deliver_time[receiver] = t
-                rec.deliver_round[receiver] = round_
+        if receiver not in rec.delivered:
+            rec.delivered[receiver] = True
+            rec.deliver_time[receiver] = t
+            rec.deliver_round[receiver] = round_
 
     # -- overhead / events ----------------------------------------------------
 
     def record_tool_call(self, name: str) -> None:
-        with self._lock:
-            self.overhead.tool_calls += 1
-            by = self.overhead.tool_calls_by_name
-            by[name] = by.get(name, 0) + 1
+        self.overhead.tool_calls += 1
+        by = self.overhead.tool_calls_by_name
+        by[name] = by.get(name, 0) + 1
 
     def record_storage_op(self, op: StorageOp) -> None:
-        with self._lock:
-            self.overhead.add_op(op)
+        self.overhead.add_op(op)
 
     def add_cpu(self, seconds: float) -> None:
         """Attribute CPU time of an ACTUAL protocol/storage operation (§8.7)."""
-        with self._lock:
-            self.overhead.cpu_time += seconds
+        self.overhead.cpu_time += seconds
 
     def record_event(self, event: dict[str, Any]) -> None:
-        with self._lock:
-            event = {"time": wall_now(), **event}
-            self.events.append(event)
+        event = {"time": wall_now(), **event}
+        self.events.append(event)
 
     # -- occupancy ------------------------------------------------------------
 
     def update_peak(self, objects: int, nbytes: int | None) -> None:
-        with self._lock:
-            self.overhead.peak_occupancy_objects = max(
-                self.overhead.peak_occupancy_objects, objects
+        self.overhead.peak_occupancy_objects = max(
+            self.overhead.peak_occupancy_objects, objects
+        )
+        if nbytes is None:
+            # The backend cannot expose a measurable physical size
+            # (e.g. M2 directory entries): report N/A (null), never a
+            # fabricated zero (§8.7).
+            self.overhead.peak_occupancy_bytes = None
+        elif self.overhead.peak_occupancy_bytes is not None:
+            self.overhead.peak_occupancy_bytes = max(
+                self.overhead.peak_occupancy_bytes, nbytes
             )
-            if nbytes is None:
-                # The backend cannot expose a measurable physical size
-                # (e.g. M2 directory entries): report N/A (null), never a
-                # fabricated zero (§8.7).
-                self.overhead.peak_occupancy_bytes = None
-            elif self.overhead.peak_occupancy_bytes is not None:
-                self.overhead.peak_occupancy_bytes = max(
-                    self.overhead.peak_occupancy_bytes, nbytes
-                )
 
     # -- run bookkeeping -------------------------------------------------------
 
     def mark_run_start(self) -> None:
-        with self._lock:
-            if self.t_start is None:
-                self.t_start = now()
+        if self.t_start is None:
+            self.t_start = now()
 
     def mark_run_end(self) -> None:
-        with self._lock:
-            self.t_end = now()
+        self.t_end = now()
 
     # -- serialization -----------------------------------------------------------
 
     def to_dict(self) -> dict[str, Any]:
-        with self._lock:
-            return {
-                "method": self.method,
-                "case_run_id": self.case_run_id,
-                "t_start": self.t_start,
-                "t_end": self.t_end,
-                "rounds_completed": self.rounds_completed,
-                "chunks": {
-                    k: {
-                        "sender": v.sender,
-                        "msg_id": v.msg_id,
-                        "chunk_id": v.chunk_id,
-                        "total_chunks": v.total_chunks,
-                        "frame_published": v.frame_published,
-                        "payload_len": v.payload_len,
-                        "send_time": v.send_time,
-                        "send_round": v.send_round,
-                        "publish_round": v.publish_round,
-                        "publish_time": v.publish_time,
-                        "delivered": v.delivered,
-                        "deliver_time": v.deliver_time,
-                        "deliver_round": v.deliver_round,
-                        "attempts": v.attempts,
-                    }
-                    for k, v in self.chunks.items()
-                },
-                "overhead": {
-                    "tool_calls": self.overhead.tool_calls,
-                    "tool_calls_by_name": self.overhead.tool_calls_by_name,
-                    "storage_ops": self.overhead.storage_ops,
-                    "logical_bytes_written": self.overhead.logical_bytes_written,
-                    "logical_bytes_read": self.overhead.logical_bytes_read,
-                    "peak_occupancy_objects": self.overhead.peak_occupancy_objects,
-                    "peak_occupancy_bytes": self.overhead.peak_occupancy_bytes,
-                    "cpu_time": self.overhead.cpu_time,
-                },
-                "events": self.events,
-                "submissions": self.submissions,
-            }
+        return {
+            "method": self.method,
+            "case_run_id": self.case_run_id,
+            "t_start": self.t_start,
+            "t_end": self.t_end,
+            "rounds_completed": self.rounds_completed,
+            "chunks": {
+                k: {
+                    "sender": v.sender,
+                    "msg_id": v.msg_id,
+                    "chunk_id": v.chunk_id,
+                    "total_chunks": v.total_chunks,
+                    "frame_published": v.frame_published,
+                    "payload_len": v.payload_len,
+                    "send_time": v.send_time,
+                    "send_round": v.send_round,
+                    "publish_round": v.publish_round,
+                    "publish_time": v.publish_time,
+                    "delivered": v.delivered,
+                    "deliver_time": v.deliver_time,
+                    "deliver_round": v.deliver_round,
+                    "attempts": v.attempts,
+                }
+                for k, v in self.chunks.items()
+            },
+            "overhead": {
+                "tool_calls": self.overhead.tool_calls,
+                "tool_calls_by_name": self.overhead.tool_calls_by_name,
+                "storage_ops": self.overhead.storage_ops,
+                "logical_bytes_written": self.overhead.logical_bytes_written,
+                "logical_bytes_read": self.overhead.logical_bytes_read,
+                "peak_occupancy_objects": self.overhead.peak_occupancy_objects,
+                "peak_occupancy_bytes": self.overhead.peak_occupancy_bytes,
+                "cpu_time": self.overhead.cpu_time,
+            },
+            "events": self.events,
+            "submissions": self.submissions,
+        }
 
 
 def hamming_distance(a: bytes, b: bytes) -> int:

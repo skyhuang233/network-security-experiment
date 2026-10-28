@@ -98,30 +98,6 @@ class Frame:
         )
         return header + self.payload
 
-    @classmethod
-    def unpack(cls, raw: bytes) -> Frame | None:
-        """Parse a wire-format frame.  Returns None if structurally invalid.
-
-        NOTE: the CRC is *not* verified here; callers keep corrupt candidates
-        for BER accounting (§8.4) and check the CRC separately.
-        """
-        if len(raw) < HEADER_SIZE + 1:
-            return None
-        msg_id, chunk_id, total_chunks, flags, checksum = struct.unpack(
-            ">HHHBH", raw[:HEADER_SIZE]
-        )
-        payload = raw[HEADER_SIZE:]
-        if len(payload) > PAYLOAD_CHUNK_SIZE:
-            return None
-        frame = cls(
-            msg_id=msg_id,
-            chunk_id=chunk_id,
-            total_chunks=total_chunks,
-            frame_published=bool(flags & 1),
-            payload=payload,
-        )
-        return frame
-
     def checksum(self) -> int:
         return crc16(self.payload)
 

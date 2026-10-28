@@ -113,12 +113,13 @@ imported for unit testing).
   self-sufficient for both agents); the plan's pilot ~30% was measured on a
   different seed set.  Reseeding is exercised accordingly.
 - **M3 physical publication state**: the key set carries a publication
-  toggle + activity marker in reserved keys k16/k17 (18 reserved keys
-  total), so even a *fresh* receiver (persistence test) can detect new
-  publications from the physical state alone.  K ≤ 18 being infeasible is a
-  limit of this protocol implementation (18 reserved header keys), not an
-  inherent property of cache-key existence channels — recorded as a sweep
-  result, not a defect, and not a universal carrier conclusion.
+  toggle + activity marker as the last two of `M3_RESERVED_KEYS` reserved
+  keys (`src/frame.py`), so even a *fresh* receiver (persistence test) can
+  detect new publications from the physical state alone.  K ≤
+  `M3_RESERVED_KEYS` being infeasible is a limit of this protocol
+  implementation, not an inherent property of cache-key existence
+  channels — recorded as a sweep result, not a defect, and not a universal
+  carrier conclusion.
 - **M3 logical-id addressing is bounded by the reduced physical header**
   (msg_id 8 bits, chunk_id 6 bits, total_chunks 8 bits): out-of-range frames
   are REJECTED at send time (never silently truncated/aliased).  After 256
@@ -127,7 +128,8 @@ imported for unit testing).
   not overwritten.  This is a protocol implementation limit; the underlying
   carrier could address more with a wider encoding.
 - **M3 delayed-read recovery** is bounded by one-publication capacity
-  (`(K − 18 − 32) // 8` payload bytes).  A positive length needs K ≥ 58;
+  (`(K − M3_RESERVED_KEYS − 32) // 8` payload bytes).  A positive length
+  needs K ≥ `M3_MIN_K_ONE_BYTE` (`tasks/exp_c.py`);
   smaller K (including the K=32 calibration point) is reported as
   「协议前提不满足」 and is not scored as a Persistence failure.
   Multi-segment messages require reading every round; a sender that stops
@@ -138,7 +140,7 @@ imported for unit testing).
 - **Experiment C pairing (§8.6)**: payloads are pre-generated once and
   reused byte-identically across delays, methods and repeats; common
   conditions run all carriers at the same payload bytes (sized to M3's
-  single-publication maximum; K < 58 is a protocol-precondition result,
+  single-publication maximum; K < `M3_MIN_K_ONE_BYTE` is a protocol-precondition result,
   not a persistence failure), the per-method native payload size is a
   separate condition; active cleanup physically removes live objects on all
   three carriers; M3's background-activity condition runs under real

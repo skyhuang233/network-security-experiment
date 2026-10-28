@@ -25,9 +25,7 @@ per run, XML text tool calls (no function-calling dependency).
 
 from __future__ import annotations
 
-import json
 import os
-from pathlib import Path
 from typing import Any, Protocol
 
 import httpx
@@ -528,7 +526,3 @@ def split_runs(
     n_test = max(1, int(round(len(shuffled) * test_fraction))) if shuffled else 0
     return {"tuning": shuffled[n_test:], "test": shuffled[:n_test]}
 
-
-def load_run_events(run_dir: str | Path) -> list[dict[str, Any]]:
-    meas = json.loads((Path(run_dir) / "measurement.json").read_text())
-    return meas.get("events", [])

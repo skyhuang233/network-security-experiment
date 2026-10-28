@@ -109,8 +109,10 @@ class OverheadInvariantsTest(unittest.TestCase):
             adapter.send_payload(0, b"payload", view=views[0])
             adapter.publish_round_end()
             ops = mlog.overhead.storage_ops
-            # K - 18 payload keys + 18 header keys probed per publication
-            self.assertEqual(ops.get("cache_probe_publish", 0), 64)
+            # one existence probe per key (reserved header plus payload)
+            self.assertEqual(
+                ops.get("cache_probe_publish", 0), config.key_set_size
+            )
             self.assertGreaterEqual(ops.get("cache_set", 0), 1)
 
     def test_operation_cpu_excludes_log_registration(self) -> None:
