@@ -1,23 +1,33 @@
 """Correct-delivery / BER truth tests (issue 5).
 
-- delivery requires candidate == truth (exact match), NOT crc_ok alone:
-  an equal-length CRC-16 collision must NOT be marked delivered
+- a decode candidate is kept for BER, but it does not by itself mark delivery
+- delivery is recorded only after the whole message is CRC-checked,
+  reassembled, and returned, and only for chunks whose payload equals truth
 - a length-mismatched candidate is unalignable: comparable=False,
   hamming=None, never a zero BER
+- send_time is the monotonic instant before each chunk's first send
+  operation, the same rule for every carrier
 """
 
 from __future__ import annotations
 
 import tempfile
+import time
 import unittest
 from pathlib import Path
 
 from config.case_run import CaseRunConfig
 from src import frame as F
-from src.base import MeasurementLog, build_views, hamming_distance
-from src.frame import crc16
+from src.base import (
+    MeasurementLog,
+    build_views,
+    hamming_distance,
+    mono_now,
+)
+from src.frame import HEADER_SIZE, PAYLOAD_CHUNK_SIZE, crc16
 from src.m1_file import M1FileContentChannel
-from src.metrics import bit_error_rate
+from src.m3_cache import M3CacheStateChannel
+from src.metrics import bit_error_rate, communication_latency, effective_throughput
 
 
 class CrcCollisionDeliveryTest(unittest.TestCase):
@@ -45,7 +55,8 @@ class CrcCollisionDeliveryTest(unittest.TestCase):
         )
         self.assertEqual(rec.delivered, {})  # NOT delivered despite crc_ok
 
-        # exact candidate marks the first correct delivery
+        # an exact payload match is still only a candidate.  Delivery is
+        # committed by receive() after the whole message is returned.
         mlog.record_attempt(
             rec,
             {
@@ -55,8 +66,8 @@ class CrcCollisionDeliveryTest(unittest.TestCase):
                 "length_mismatch": False, "hamming": 0,
             },
         )
-        self.assertTrue(rec.delivered.get(1))
-        self.assertEqual(rec.deliver_round[1], 3)
+        self.assertEqual(rec.delivered, {})
+        self.assertEqual(len(rec.attempts), 2)
 
     def test_hamming_prefix_only_caveat(self) -> None:
         # documents WHY comparable requires equal length: zip() compares
@@ -118,6 +129,158 @@ class LengthMismatchAdapterTest(unittest.TestCase):
             self.assertEqual(ber["length_mismatch_attempts"], 1)
             self.assertIsNone(ber["ber_total"])
             self.assertEqual(ber["comparable_chunk_attempts"], 0)
+
+
+def _m1(td: str):
+    config = CaseRunConfig(case_run_id="t", case_id="x", seed=0, method="M1")
+    mlog = MeasurementLog("M1", "t")
+    adapter = M1FileContentChannel(root=td, measurement=mlog, config=config)
+    return adapter, mlog, build_views(adapter, config)
+
+
+class ApplicationDeliveryTest(unittest.TestCase):
+    def test_partial_chunks_not_counted_as_delivered(self) -> None:
+        # 65 B -> chunk 0 (64 B) + chunk 1 (1 B).  Drop chunk 1 after it
+        # was published.  Chunk 0 decodes correctly, but the agent receives
+        # no message, so neither chunk is delivered throughput.
+        payload = b"x" * (PAYLOAD_CHUNK_SIZE + 1)
+        with tempfile.TemporaryDirectory() as td:
+            adapter, mlog, views = _m1(td)
+            adapter.set_round(1)
+            adapter.send_payload(0, payload, view=views[0])
+            adapter.publish_round_end()
+            live = sorted((Path(td) / "live" / "sender0").iterdir())
+            self.assertEqual(len(live), 2)
+            live[1].unlink()
+
+            adapter.set_round(2)
+            msgs = adapter.receive(1, view=views[1])
+            self.assertEqual(msgs, [])
+
+            by_id = {rec.chunk_id: rec for rec in mlog.chunks.values()}
+            self.assertEqual(len(by_id), 2)
+            self.assertTrue(by_id[0].attempts)
+            self.assertTrue(by_id[0].attempts[-1]["exact_match"])
+            self.assertEqual(by_id[0].delivered, {})
+            self.assertEqual(by_id[1].delivered, {})
+            self.assertEqual(by_id[1].attempts, [])
+
+            meas = mlog.to_dict()
+            self.assertEqual(effective_throughput(meas)["bidirectional_bits"], 0)
+            lat = communication_latency(meas)["0->1"]
+            self.assertEqual(lat["delivered_chunks"], 0)
+            self.assertEqual(lat["censored_chunks"], 2)
+
+    def test_crc_failure_not_delivered_even_if_payload_matches(self) -> None:
+        payload = b"hello"
+        with tempfile.TemporaryDirectory() as td:
+            adapter, mlog, views = _m1(td)
+            adapter.set_round(1)
+            adapter.send_payload(0, payload, view=views[0])
+            adapter.publish_round_end()
+            live = Path(td) / "live" / "sender0" / "f000000.bin"
+            raw = bytearray(live.read_bytes())
+            # corrupt the CRC field only; the payload bytes stay equal to truth
+            raw[HEADER_SIZE - 2] ^= 0xFF
+            raw[HEADER_SIZE - 1] ^= 0xFF
+            live.write_bytes(bytes(raw))
+
+            adapter.set_round(2)
+            msgs = adapter.receive(1, view=views[1])
+            self.assertEqual(msgs, [])
+
+            rec = next(iter(mlog.chunks.values()))
+            self.assertEqual(len(rec.attempts), 1)
+            attempt = rec.attempts[0]
+            self.assertFalse(attempt["crc_ok"])
+            self.assertTrue(attempt["exact_match"])
+            self.assertEqual(attempt["hamming"], 0)
+            self.assertEqual(rec.delivered, {})
+
+            meas = mlog.to_dict()
+            self.assertEqual(effective_throughput(meas)["bidirectional_bits"], 0)
+            ber = bit_error_rate(meas)
+            self.assertEqual(ber["comparable_chunk_attempts"], 1)
+            self.assertEqual(ber["ber_total"], 0.0)
+
+    def test_complete_message_is_delivered_after_return(self) -> None:
+        payload = b"hello"
+        with tempfile.TemporaryDirectory() as td:
+            adapter, mlog, views = _m1(td)
+            adapter.set_round(1)
+            adapter.send_payload(0, payload, view=views[0])
+            adapter.publish_round_end()
+            adapter.set_round(2)
+            msgs = adapter.receive(1, view=views[1])
+            self.assertEqual([m.data for m in msgs], [payload])
+            rec = next(iter(mlog.chunks.values()))
+            self.assertTrue(rec.delivered.get(1))
+            self.assertEqual(rec.deliver_round[1], 2)
+            self.assertGreaterEqual(rec.deliver_time[1], rec.send_time)
+            self.assertIsNotNone(rec.publish_time)
+            self.assertLessEqual(rec.send_time, rec.publish_time)
+            self.assertLessEqual(rec.publish_time, rec.deliver_time[1])
+            # the metric interval starts at send_time, not publish_time
+            lat = communication_latency(mlog.to_dict())["0->1"]
+            self.assertEqual(lat["delivered_chunks"], 1)
+            self.assertAlmostEqual(
+                lat["latency_seconds_median"],
+                rec.deliver_time[1] - rec.send_time,
+            )
+
+
+class SendTimeOriginTest(unittest.TestCase):
+    def test_each_chunk_starts_before_its_stage(self) -> None:
+        payload = b"y" * (PAYLOAD_CHUNK_SIZE + 1)
+        with tempfile.TemporaryDirectory() as td:
+            adapter, mlog, views = _m1(td)
+            enters: list[float] = []
+            orig = adapter._stage_frame
+
+            def wrapped(sender, fr):
+                enters.append(mono_now())
+                return orig(sender, fr)
+
+            adapter._stage_frame = wrapped
+            adapter.set_round(1)
+            adapter.send_payload(0, payload, view=views[0])
+            recs = sorted(mlog.chunks.values(), key=lambda r: r.chunk_id)
+            self.assertEqual(len(recs), 2)
+            self.assertEqual(len(enters), 2)
+            # chunk 0 includes chunking; both stamps are before that
+            # chunk's own staging call
+            self.assertLessEqual(recs[0].send_time, enters[0])
+            self.assertLessEqual(recs[1].send_time, enters[1])
+            self.assertLessEqual(recs[0].send_time, recs[1].send_time)
+            self.assertGreater(abs(recs[0].send_time - time.time()), 1_000_000)
+
+    def test_m3_send_time_precedes_cache_publish(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            config = CaseRunConfig(
+                case_run_id="t", case_id="x", seed=0, method="M3",
+                key_set_size=64,
+            )
+            mlog = MeasurementLog("M3", "t")
+            adapter = M3CacheStateChannel(root=td, measurement=mlog, config=config)
+            views = build_views(adapter, config)
+            adapter.set_round(1)
+            adapter.send_payload(0, b"queued", view=views[0])
+            rec = next(iter(mlog.chunks.values()))
+            self.assertIsNone(rec.publish_time)
+            queued_at = rec.send_time
+            adapter.publish_round_end()
+            self.assertIsNotNone(rec.publish_time)
+            self.assertGreaterEqual(rec.publish_time, queued_at)
+            # latency still starts at the pre-stage stamp, not publish_time
+            self.assertEqual(rec.send_time, queued_at)
+
+    def test_audit_events_use_wall_clock(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            adapter, mlog, views = _m1(td)
+            adapter.set_round(1)
+            adapter.send_payload(0, b"z", view=views[0])
+            audit = next(e for e in mlog.events if e.get("event") == "storage_audit")
+            self.assertAlmostEqual(audit["time"], time.time(), delta=5.0)
 
 
 if __name__ == "__main__":
