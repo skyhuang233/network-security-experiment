@@ -32,7 +32,7 @@ class M1FileContentChannel(ChannelAdapter):
 
     # ------------------------------------------------------------- send side
 
-    def _stage_frame(self, sender: int, fr: F.Frame) -> None:
+    def _stage_frame(self, sender: int, fr: F.Frame) -> bool:
         body = fr.pack()
         if len(body) > M1_BODY_LIMIT:
             raise ValueError(f"M1 body exceeds L={M1_BODY_LIMIT}B")
@@ -46,9 +46,18 @@ class M1FileContentChannel(ChannelAdapter):
         stage_dir = self.root / "stage" / f"round{self.current_round}" / f"sender{sender}"
         stage_dir.mkdir(parents=True, exist_ok=True)
         path = stage_dir / name
-        with open(path, "wb") as f:
-            f.write(body)
-        self._op("file_write", nbytes=len(body))
+        with self._timed_op("file_write", nbytes=len(body)):
+            with open(path, "wb") as f:
+                f.write(body)
+        # §10 audit: W sees the ACTUAL visible file body (M1's carrier is
+        # the file content), not the unified tool-call plaintext.
+        # resource_id is the stable object identity: same basename under
+        # two senders is two objects.
+        self._audit(
+            "file_write", sender, body_len=len(body),
+            body_repr=repr(body[:256]),
+            **self._resource(sender, name),
+        )
         return True
 
     # ------------------------------------------------------- round boundary
@@ -64,11 +73,14 @@ class M1FileContentChannel(ChannelAdapter):
         for path in sorted(stage_dir.iterdir()):
             if path.is_file():
                 size = path.stat().st_size
-                os.replace(path, live_dir / path.name)
-                self._op("promote_move", nbytes=size)
+                with self._timed_op("promote_move", nbytes=size):
+                    os.replace(path, live_dir / path.name)
                 self._live_bytes[sender] += size
                 slot = int(path.stem[1:])
                 self._max_live_slot[sender] = max(self._max_live_slot[sender], slot)
+                self._audit(
+                    "promote_move", sender, **self._resource(sender, path.name)
+                )
         shutil.rmtree(stage_dir, ignore_errors=True)
         self.update_peak_occupancy()
 
@@ -80,20 +92,39 @@ class M1FileContentChannel(ChannelAdapter):
             return []
         out: list[F.WireFrame] = []
         seen = self._seen[receiver]
-        for path in sorted(live_dir.iterdir()):
-            if not path.is_file():
-                continue
+        with self._timed_op("dir_list", count=1):  # the namespace scan is real work
+            entries = [p for p in sorted(live_dir.iterdir()) if p.is_file()]
+        for path in entries:
             name = f"s{sender}/{path.name}"
             if name in seen:
                 continue
             seen.add(name)
-            with open(path, "rb") as f:
-                body = f.read()
-            self._op("file_read", nbytes=len(body))
+            with self._timed_op("file_read", nbytes=path.stat().st_size):
+                with open(path, "rb") as f:
+                    body = f.read()
+            # §10 audit: which file of whose namespace was read (access
+            # association for the extended view)
+            self._audit(
+                "file_read", receiver, **self._resource(sender, path.name)
+            )
             wf = F.WireFrame.parse(body)
             if wf is not None:
                 out.append(wf)
         return out
+
+    def _resource(self, owner: int, file_name: str) -> dict[str, str]:
+        """Stable identity of one M1 object.
+
+        Slot names restart at f000000.bin for every sender, so the basename
+        alone does not identify the object.  Writes and reads of the same
+        object share `resource_id`; the reader is the audit event's agent.
+        """
+        namespace = f"sender{owner}"
+        return {
+            "file": file_name,
+            "namespace": namespace,
+            "resource_id": f"{self.mlog.case_run_id}|{namespace}|{file_name}",
+        }
 
     def _occupancy(self) -> tuple[int, int]:
         n = sum(s + 1 for s in self._max_live_slot.values())

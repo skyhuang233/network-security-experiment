@@ -17,3 +17,6 @@ references/silo-bench/acl26-silo-bench/
 
 # .scratch
 /.scratch
+
+# macOS
+.DS_Store

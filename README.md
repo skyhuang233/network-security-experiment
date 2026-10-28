@@ -25,7 +25,8 @@ src/
   m3_cache.py              (staging/promotion/reading) and claims its own
                            carrier params (M3 K/TTL, body/name limits) from
                            CaseRunConfig at construction
-  metrics.py               the seven metrics (§8)
+  metrics.py               the seven metrics (§8) + experiment-B capacity
+                           selection (highest repeatable rate per unit)
   audit_agent.py           W: 10-round windows, content/extended views,
                            measurement-layer labels, TPR/FPR, run-level split;
                            also the OpenAI-compatible LLM client (§13)
@@ -69,10 +70,37 @@ Extra args pass through to each experiment's argparse (e.g.
 screen session (`screen -L -Logfile runs/exp_a.log -S exp_a bash runs/exp_a.sh`).
 
 Configuration (model binding, K, BER threshold) resolves from environment
-variables and is stamped into every report (`config`, §15).  The
-dev-only `ScriptedProvider` replays fixed tool-call scripts to integration-
-test the plumbing; every run records its provider name, and scripted runs
-are never usable as recorded experiment data.
+variables and is stamped into every report (`config`, §15); each experiment
+script records the configuration it ACTUALLY consumed (argparse values after
+env-defaulting, per-run `run_config` event in the measurement log), so the
+record can never drift from the executed run.  The monitor W binds
+`NSE_W_MODEL` (falling back to `NSE_MODEL`).  The dev-only `ScriptedProvider`
+replays fixed tool-call scripts to integration-test the plumbing
+(`python -m tasks.exp_a --provider scripted`, no API calls); every run
+records its provider name, and scripted runs are never usable as recorded
+experiment data.
+
+## Tests
+
+```bash
+.venv/bin/python -m unittest discover -s tests
+```
+
+Covers the tool-call protocol (matrix payloads, no silent numeric
+conversion), correct-delivery truth (CRC-16 collisions do NOT count as
+delivered; length-mismatched candidates never get a zero BER), W's audit
+information boundary (physical backend events per method, never the
+send_payload plaintext), window ground-truth labeling (cross-window
+communication, failed-transmission attempts, separated controls), capacity
+selection (highest rate, not largest payload), resource-overhead invariants
+(null occupancy for unmeasurable backends, publish-side probe counting),
+M3 logical-id addressing (out-of-range rejection, refusal when the id space is exhausted),
+persistence pairing (end-to-end exp_c runs: common active cleanup on all
+carriers, real M3 eviction pressure, repeat-estimated curves, paired
+payload sha256 across methods/delays/repeats), and an end-to-end exp_a
+smoke test with the scripted provider.  The exp_c coverage drives the real
+entry point as a subprocess (the script's module-level main flow cannot be
+imported for unit testing).
 
 ## Findings baked into the implementation
 
@@ -87,18 +115,42 @@ are never usable as recorded experiment data.
 - **M3 physical publication state**: the key set carries a publication
   toggle + activity marker in reserved keys k16/k17 (18 reserved keys
   total), so even a *fresh* receiver (persistence test) can detect new
-  publications from the physical state alone.  K ≤ 18 is structurally
-  infeasible — recorded as a sweep result, not a defect.
+  publications from the physical state alone.  K ≤ 18 being infeasible is a
+  limit of this protocol implementation (18 reserved header keys), not an
+  inherent property of cache-key existence channels — recorded as a sweep
+  result, not a defect, and not a universal carrier conclusion.
+- **M3 logical-id addressing is bounded by the reduced physical header**
+  (msg_id 8 bits, chunk_id 6 bits, total_chunks 8 bits): out-of-range frames
+  are REJECTED at send time (never silently truncated/aliased).  After 256
+  messages the sender refuses further sends (`carrier_msg_id_exhausted`);
+  ids are not wrapped, so measurement history and delivery identity are
+  not overwritten.  This is a protocol implementation limit; the underlying
+  carrier could address more with a wider encoding.
 - **M3 delayed-read recovery** is bounded by one-publication capacity
-  (`(K − 18 − 32)/8` payload bytes at K): multi-segment messages require
-  reading every round; a sender that stops refreshing leaves only the last
-  publication on the key set.  This is the carrier's structural property
-  (§6 note), documented in `exp_c.py`.
+  (`(K − 18 − 32) // 8` payload bytes).  A positive length needs K ≥ 58;
+  smaller K (including the K=32 calibration point) is reported as
+  「协议前提不满足」 and is not scored as a Persistence failure.
+  Multi-segment messages require reading every round; a sender that stops
+  refreshing leaves only the last publication on the key set.  This bound
+  comes from the one-segment-per-round choice of this protocol
+  implementation (§6 note), documented in `tasks/exp_c.py` — it is not a
+  universal property of cache-key existence channels.
+- **Experiment C pairing (§8.6)**: payloads are pre-generated once and
+  reused byte-identically across delays, methods and repeats; common
+  conditions run all carriers at the same payload bytes (sized to M3's
+  single-publication maximum; K < 58 is a protocol-precondition result,
+  not a persistence failure), the per-method native payload size is a
+  separate condition; active cleanup physically removes live objects on all
+  three carriers; M3's background-activity condition runs under real
+  same-cache LRU eviction pressure; every point is estimated over repeats.
 
 ## References
 
 - SILO-BENCH source is pinned under `references/silo-bench/acl26-silo-bench`
-  (git commit recorded by `config` into each report).  Task generation,
+  (git commit recorded by `config` into every report).  That directory is
+  gitignored, so the upstream pin (repo URL + commit) is ALSO committed in
+  `config/environment.py` and a clean checkout falls back to it — upstream
+  provenance never depends on an untracked directory.  Task generation,
   data sharding, round visibility semantics and the LLM client are reused;
   the round loop, tools and storage layer are rewritten per the design doc
   (§4 "new harness, reuse tasks and scheduling semantics only").

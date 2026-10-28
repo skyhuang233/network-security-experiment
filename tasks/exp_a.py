@@ -11,7 +11,9 @@ The negative control ("no cross-agent shared state") runs the SAME tasks
 with policy_mode="separated": A and B get seemingly-identical but
 independent storage backends, keep reading and writing allowed work
 products, but have NO cross-agent channel — the real-negative source for
-experiment D (§10).
+experiment D (§10).  It runs ALL methods under study (not just M1) so the
+audit stage has per-method normal-operation background (M2 directory
+operations, M3 cache operations) for the false-positive side.
 
 The positive environment control ("authorized direct communication") uses a
 direct-mailbox pseudo-channel to verify the model/task/execution framework
@@ -26,13 +28,17 @@ Nanochat-style script; run from the repo root (package installed via `uv sync`):
     python -m tasks.exp_a --classes I-01 I-04
     python -m tasks.exp_a --seeds-per-class 2
 
-Requires NSE_API_KEY / NSE_MODEL in the environment (real LLM task agents).
+Recorded runs use the real LLM (`--provider openai`, the default; requires
+NSE_API_KEY / NSE_MODEL).  `--provider scripted` replays the dev-only
+ScriptedProvider with NO API calls — smoke tests only, never usable as
+recorded experiment data (§1).
 """
 
 from __future__ import annotations
 
 import argparse
 import json
+import os
 import random as _random
 from pathlib import Path
 from typing import Any
@@ -56,10 +62,12 @@ parser.add_argument("--registry", type=str, default="", help="seed registry path
 parser.add_argument("--methods", nargs="+", default=["M1", "M2", "M3"], help="storage carriers under study")
 parser.add_argument("--classes", nargs="+", default=None, help="restrict to these task classes (default: all valid)")
 parser.add_argument("--seeds-per-class", type=int, default=None, help="cap valid seeds per class (default: all)")
-parser.add_argument("--max-rounds", type=int, default=100, help="round budget per run")
+parser.add_argument("--max-rounds", type=int, default=int(os.environ.get("NSE_MAX_ROUNDS", "100")), help="round budget per run (default: NSE_MAX_ROUNDS or 100)")
 parser.add_argument("--order-seed", type=int, default=2026, help="seed for the randomized run order (§14)")
 parser.add_argument("--no-negative-control", action="store_true", help="skip the separated-backend negative control runs")
 parser.add_argument("--direct-control", action="store_true", help="also run the authorized-direct-communication positive control")
+parser.add_argument("--provider", choices=["openai", "scripted"], default="openai",
+                    help="LLM provider: real API (recorded runs, default) or dev-only scripted replay (smoke tests; never usable as data)")
 args = parser.parse_args()
 # -----------------------------------------------------------------------------
 
@@ -118,10 +126,13 @@ def build_jobs(
     seeds_per_class: int | None = None,
     max_rounds: int = 100,
     order_seed: int = 2026,
+    key_set_size: int = 128,
+    provider_name: str = "openai",
 ) -> list[tuple[CaseRunConfig, str]]:
     """Assemble one batch of (config, condition) jobs from the seed registry.
 
-    Run order is randomized per batch (§14).
+    Run order is randomized per batch (§14).  `key_set_size` and
+    `provider_name` are the values the runner actually consumes (§15).
     """
     jobs: list[tuple[CaseRunConfig, str]] = []
     methods = methods or ["M1", "M2", "M3"]
@@ -143,7 +154,8 @@ def build_jobs(
                             method=method,
                             policy_mode=policy_mode,
                             max_rounds=max_rounds,
-                            provider_name="openai",
+                            key_set_size=key_set_size,
+                            provider_name=provider_name,
                             direction_label=direction.get(seed),
                         ),
                         condition,
@@ -170,8 +182,21 @@ if not registry_path.exists():
     raise SystemExit(
         f"seed registry not found at {registry_path}; run `nse precheck` first"
     )
+registry = load_registry(registry_path)
 
-provider = provider_from_env()
+# provider binding actually consumed by this batch (§15): the real API for
+# recorded runs; the dev-only scripted replay for smoke tests (never usable
+# as recorded experiment data)
+if args.provider == "scripted":
+    from tasks.round_loop import scripted_provider
+
+    provider = scripted_provider()
+else:
+    provider = provider_from_env()
+
+# M3's key-set size is consumed from the same env var that is recorded
+# (§15.4); the runner and the report can never disagree
+m3_key_set_size = int(os.environ.get("NSE_M3_K", "128"))
 
 # adapter table: the three carriers, plus the direct-mailbox control when
 # requested (registered into a local copy, never into the shared table)
@@ -180,8 +205,10 @@ if args.direct_control:
     adapters["CTRL-DIRECT"] = DirectMailboxChannel
 
 # job assembly: main runs (M1/M2/M3, shared backends) plus the
-# separated-backend negative control (§9/§10); carrier shape is irrelevant
-# for the negative control, so one method suffices
+# separated-backend negative control (§9/§10).  The negative control runs
+# ALL methods under study: the audit stage (experiment D) needs per-method
+# normal-operation background (M2 directory ops, M3 cache ops) for the
+# false-positive side, not M1 files only.
 jobs = build_jobs(
     registry,
     condition="main",
@@ -192,6 +219,8 @@ jobs = build_jobs(
     seeds_per_class=args.seeds_per_class,
     max_rounds=args.max_rounds,
     order_seed=args.order_seed,
+    key_set_size=m3_key_set_size,
+    provider_name=args.provider,
 )
 if not args.no_negative_control:
     jobs += build_jobs(
@@ -199,11 +228,13 @@ if not args.no_negative_control:
         condition="negative-control",
         policy_mode="separated",
         run_tag="negctrl",
-        methods=["M1"],
+        methods=args.methods,
         classes=args.classes,
         seeds_per_class=args.seeds_per_class,
         max_rounds=args.max_rounds,
         order_seed=args.order_seed,
+        key_set_size=m3_key_set_size,
+        provider_name=args.provider,
     )
 if args.direct_control:
     jobs += build_jobs(
@@ -216,6 +247,8 @@ if args.direct_control:
         seeds_per_class=args.seeds_per_class,
         max_rounds=args.max_rounds,
         order_seed=args.order_seed,
+        key_set_size=m3_key_set_size,
+        provider_name=args.provider,
     )
 
 # Go!
@@ -254,6 +287,9 @@ while True:
             "condition": condition,
             "policy_mode": config.policy_mode,
             "direction_label": config.direction_label,
+            "key_set_size": config.key_set_size,
+            "max_rounds": config.max_rounds,
+            "provider": config.provider_name,
             "rounds": result["rounds"],
             "wall_seconds": result["wall_seconds"],
             "submissions": result["submissions"],
@@ -271,16 +307,31 @@ runs_main = [r for r in runs if r["condition"] == "main"]
 neg = [r for r in runs if r["condition"] == "negative-control"]
 direct = [r for r in runs if r["condition"] == "direct-control"]
 out = workspace / "reports" / "exp_a.json"
-save_config(workspace / "reports" / "config.json")
+# §15: record the configuration this batch ACTUALLY consumed (argparse values
+# after env-defaulting), not a second, parallel env reading
+save_config(
+    workspace / "reports" / "config.json",
+    max_rounds=args.max_rounds,
+    m3_key_set_size_default=m3_key_set_size,
+    methods=args.methods,
+    provider=args.provider,
+)
 out.parent.mkdir(parents=True, exist_ok=True)
+report: dict[str, Any] = {
+    "runs": runs_main,
+    "negative_control": neg,
+    "direct_control": direct,
+    "provider": args.provider,
+    "open_items": OPEN_ITEMS,
+}
+if args.provider == "scripted":
+    report["warning"] = (
+        "scripted-provider runs are dev-only smoke tests and are never "
+        "usable as recorded experiment data (§1)"
+    )
 out.write_text(
     json.dumps(
-        {
-            "runs": runs_main,
-            "negative_control": neg,
-            "direct_control": direct,
-            "open_items": OPEN_ITEMS,
-        },
+        report,
         indent=2,
         ensure_ascii=False,
         default=str,

@@ -63,8 +63,11 @@ class M2DirNameChannel(ChannelAdapter):
         path = stage_dir / name
         if path.exists():
             return True  # exact resend: idempotent (same frame content)
-        path.mkdir(parents=True, exist_ok=False)  # EMPTY directory only
-        self._op("dir_create", nbytes=len(name))
+        with self._timed_op("dir_create", nbytes=len(name)):
+            path.mkdir(parents=True, exist_ok=False)  # EMPTY directory only
+        # §10 audit: the actual directory name (M2's carrier) goes to the
+        # extended view only; content view gets basic operation info
+        self._audit("dir_create", sender, name=name, name_len=len(name))
         return True
 
     # ------------------------------------------------------- round boundary
@@ -81,9 +84,10 @@ class M2DirNameChannel(ChannelAdapter):
             if path.is_dir():
                 target = live_dir / path.name
                 if not target.exists():
-                    path.rename(target)  # rename = the allowed M2 mutation
-                    self._op("promote_rename")
+                    with self._timed_op("promote_rename", count=1):
+                        path.rename(target)  # rename = the allowed M2 mutation
                     self._live_dirs[sender] += 1
+                    self._audit("promote_rename", sender, name=path.name)
         shutil.rmtree(stage_dir, ignore_errors=True)
         self.update_peak_occupancy()
 
@@ -95,14 +99,20 @@ class M2DirNameChannel(ChannelAdapter):
             return []
         out: list[F.WireFrame] = []
         seen = self._seen[receiver]
-        fresh = [
-            path
-            for path in sorted(live_dir.iterdir())
-            if path.is_dir() and f"s{sender}/{path.name}" not in seen
-        ]
+        with self._timed_op("dir_list", count=1):
+            fresh = [
+                path
+                for path in sorted(live_dir.iterdir())
+                if path.is_dir() and f"s{sender}/{path.name}" not in seen
+            ]
+        # §10 audit: EVERY executed namespace scan is recorded (a scan that
+        # finds nothing is still a real storage operation), for both views
+        self._audit(
+            "dir_list", receiver, namespace=f"sender{sender}",
+            found=len(fresh), names=[p.name for p in fresh],
+        )
         if not fresh:
             return out
-        self._op("dir_list", count=1)  # one list operation per namespace scan
         for path in fresh:
             seen.add(f"s{sender}/{path.name}")
             raw = decode_name(path.name)
@@ -113,6 +123,8 @@ class M2DirNameChannel(ChannelAdapter):
                 out.append(wf)
         return out
 
-    def _occupancy(self) -> tuple[int, int]:
+    def _occupancy(self) -> tuple[int, int | None]:
         n = sum(self._live_dirs.values())
-        return n, 0
+        # Directory-entry storage size is not measurable on APFS: report
+        # N/A (None), never a fabricated zero (§8.7).
+        return n, None

@@ -21,5 +21,6 @@ class CaseRunConfig:
     writable_subset: tuple[str, ...] | None = None  # control (c)
     key_set_size: int = 128  # M3
     ttl_seconds: float | None = None  # M3, experiment C
+    cache_size_limit: int = 2**30  # M3 diskcache size_limit in bytes
     provider_name: str = "openai"  # or "scripted" (dev-only)
     direction_label: str | None = None  # precheck stratification label
