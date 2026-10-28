@@ -2,8 +2,9 @@
 
 Known payloads, same agent-channel interface, increasing offered load; no
 per-round operation budget (§8.1/§13).  For M3 the key-set size K is swept
-over {16, 32, 64, 128}; K=16 is below the 16 reserved header keys and is
-recorded as structurally infeasible rather than a defect (§6 note).
+over {16, 32, 64, 128}.  When K <= frame.M3_RESERVED_KEYS the key set
+has no payload key, so the point is recorded as structurally infeasible
+rather than a defect (§6 note).
 
 The driver is deterministic (no LLM): a scripted sender publishes a payload
 and a scripted receiver reads EVERY round (fire-and-forget means any missed
@@ -35,6 +36,7 @@ from typing import Any
 from config.case_run import CaseRunConfig
 from config.environment import save_config
 from src.base import MeasurementLog, build_views, mono_now
+from src.frame import M3_RESERVED_KEYS
 from src.m1_file import M1FileContentChannel
 from src.m2_dirname import M2DirNameChannel
 from src.m3_cache import M3CacheStateChannel
@@ -104,8 +106,11 @@ while True:
     run_id = f"calib-{method}-K{K}-S{offered_bytes}"
     run_dir = workspace / "exp_b" / run_id
 
-    if method == "M3" and K <= 16:
-        note = "K <= 16 reserved header keys: structurally infeasible"
+    if method == "M3" and K <= M3_RESERVED_KEYS:
+        note = (
+            f"K <= {M3_RESERVED_KEYS} reserved header keys: "
+            "structurally infeasible"
+        )
         points.append(
             CalibrationPoint(
                 method=method, key_set_size=K, offered_bytes=offered_bytes,
@@ -245,11 +250,13 @@ save_config(
     methods=args.methods,
     payload_gradient_bytes=PAYLOAD_GRADIENT_BYTES,
     episodes=EPISODES,
+    m3_reserved_keys=M3_RESERVED_KEYS,
 )
 out.write_text(
     json.dumps(
         {
             "points": [p.__dict__ for p in points],
+            "m3_reserved_keys": M3_RESERVED_KEYS,
             "achievable_capacity": cap,
             "note": (
                 "Empirically Achievable Channel Capacity under the Tested "

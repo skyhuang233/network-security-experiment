@@ -1,17 +1,18 @@
 """M3 — Shared-Cache State Signaling (design doc §6, §12).
 
-Backend: DiskCache 5.6.3 (file backend, real on-disk SQLite + files).  A and
-B are two threads in one process, each holding an INDEPENDENT `Cache` handle
-pointed at the same directory — measured (§2) to be real cross-handle disk
-I/O with working expiry semantics, so this does NOT degrade to shared
-memory.  No Python objects are ever passed between agents; all information
-goes through the storage backend (measurement-layer discipline, §12).
+Backend: DiskCache 5.6.3 (file backend, real on-disk SQLite + files).  Each
+agent holds an INDEPENDENT `Cache` handle pointed at the same directory.
+`CaseRun._run_one_round` calls those agents sequentially on the calling
+thread.  Cross-handle disk I/O with working expiry was measured (§2), so
+this channel stays real disk I/O and does not degrade to shared memory.
+No Python objects are ever passed between agents; all information goes
+through the storage backend (measurement-layer discipline, §12).
 
 Carrier: key EXISTENCE / absence only (1 bit per key).  Key names carry no
 task text and cache VALUES are never read as bodies.
 
 Key set: K keys per sender (`s{sender}_k{index:04d}`), fixed for the run.
-Per-publication reserved header keys (18 of them, per sender):
+Per-publication reserved header keys (`frame.M3_RESERVED_KEYS` of them, per sender):
     k00..k07  msg_id, 8 bits              (the reduced header carries only
                                           8 bits: ids >= 256 are REJECTED
                                           at send time.  After 256 messages
@@ -29,18 +30,18 @@ Per-publication reserved header keys (18 of them, per sender):
     k17       activity marker: set on the first publication, never cleared —
               distinguishes "never published" (all keys absent) from a real
               publication whose state happens to be all-absent payload keys
-Remaining K-18 keys carry payload bits, 1 bit per key, per publication.
+Remaining K - M3_RESERVED_KEYS keys carry payload bits, 1 bit per key, per publication.
 
 PROTOCOL IMPLEMENTATION LIMITS (NOT carrier properties).  The following are
 choices of THIS frame protocol implementation, not inherent properties of a
 cache-key existence channel, and must not be reported as universal
 conclusions about the carrier:
-- the reduced 8/6-bit id widths and the 18-key reserved header (a wider
+- the reduced 8/6-bit id widths and the M3_RESERVED_KEYS reserved header (a wider
   header or more header keys would address more messages / larger chunks);
-- K > 18 being required (an implementation with a leaner header would run
+- K > M3_RESERVED_KEYS being required (an implementation with a leaner header would run
   at smaller K);
-- ONE segment of ONE in-flight chunk published per round (P = K-18 payload
-  bits per publication; pipelining multiple segments per round is possible
+- ONE segment of ONE in-flight chunk published per round (P = K - M3_RESERVED_KEYS
+  payload bits per publication; pipelining multiple segments per round is possible
   with a larger state encoding).
 These limits are recorded as such wherever they surface (sweep notes,
 capacity basis, run events).
@@ -48,7 +49,7 @@ capacity basis, run events).
 Per-chunk bit stream (the 9 B logical frame cannot fit in reserved keys, so
 its semantic content travels in-band):
     [total_chunks u8][payload_len u8][crc16 u16 BE][payload <= 64 B]
-One *segment* of P = K-16 payload bits is published per round for ONE
+One *segment* of P = K - M3_RESERVED_KEYS payload bits is published per round for ONE
 in-flight chunk (round-robin among that sender's in-flight chunks; the single
 key set expresses exactly one chunk's state per round).  ceil(stream_bits/P)
 publications are needed per chunk — "达同样 payload 所需键数/轮数结构性偏多
@@ -116,10 +117,10 @@ class M3CacheStateChannel(ChannelAdapter):
         self.cache_size_limit = getattr(
             self.config, "cache_size_limit", 2**30
         )  # diskcache size_limit (eviction pressure is an exp_c condition)
-        if self.K <= 18:
+        if self.K <= F.M3_RESERVED_KEYS:
             raise ValueError(
-                f"M3 needs K > 18 reserved keys (16 header + toggle + "
-                f"activity; got K={self.K}); smaller K is structurally "
+                f"M3 needs K > {F.M3_RESERVED_KEYS} reserved keys "
+                f"(got K={self.K}); smaller K is structurally "
                 "infeasible — record as sweep result"
             )
         self.live_dir = self.root / "live"
@@ -159,10 +160,10 @@ class M3CacheStateChannel(ChannelAdapter):
         if self.policy.writable_subset is not None:
             return [
                 i
-                for i in range(18, self.K)
+                for i in range(F.M3_RESERVED_KEYS, self.K)
                 if str(i) in self.policy.writable_subset
             ]
-        return list(range(18, self.K))
+        return list(range(F.M3_RESERVED_KEYS, self.K))
 
     # ------------------------------------------------------------- send side
 
@@ -234,7 +235,8 @@ class M3CacheStateChannel(ChannelAdapter):
         cache = self._cache(sender)
         idx = self._payload_indices()
         # reserved keys: msg_id low 8, chunk_id low 6, published, parity,
-        # then the publication toggle (k16).  The masks are IDENTITY:
+        # then the publication toggle and the activity marker.  The width
+        # must equal M3_RESERVED_KEYS.  The masks are IDENTITY:
         # _validate_frames rejected anything outside the physical widths at
         # stage time, so no id is ever silently truncated here.
         mid = chunk["msg_id"] & 0xFF
@@ -247,8 +249,12 @@ class M3CacheStateChannel(ChannelAdapter):
         header_bits.append(parity)
         self._gen[sender] += 1
         toggle = self._gen[sender] & 1
-        header_bits.append(toggle)  # k16
-        header_bits.append(1)  # k17 activity marker (set forever)
+        header_bits.append(toggle)  # publication toggle
+        header_bits.append(1)  # activity marker, last reserved key
+        if len(header_bits) != F.M3_RESERVED_KEYS:
+            raise RuntimeError(
+                "M3 reserved header width does not match M3_RESERVED_KEYS"
+            )
         changes: list[dict[str, Any]] = []  # §10 audit trail (per key op)
         # payload keys: segment bit j lands on allowed key idx[j]
         for j, k in enumerate(idx):
@@ -300,8 +306,12 @@ class M3CacheStateChannel(ChannelAdapter):
         # existence probes ONLY (never len()/iteration, §12)
         with self._timed_op("cache_probe", count=self.K):
             state = [1 if self._key(sender, k) in cache else 0 for k in range(self.K)]
-        toggle = state[16]
-        if state[17] == 0:
+        # Toggle and activity occupy the last two reserved keys; payload
+        # starts at M3_RESERVED_KEYS (frame.py).
+        toggle_at = F.M3_RESERVED_KEYS - 2
+        activity_at = F.M3_RESERVED_KEYS - 1
+        toggle = state[toggle_at]
+        if state[activity_at] == 0:
             # nothing was EVER published by this sender: the all-absent
             # state is not a publication; never consume it
             self._audit(
@@ -324,16 +334,18 @@ class M3CacheStateChannel(ChannelAdapter):
             "cache_probe", receiver, namespace=f"sender{sender}",
             keys_probed=self.K, new_publication=True,
         )
-        header_bits = state[:16]
+        header_bits = state[:toggle_at]
+        published_at = len(header_bits) - 2
+        parity_at = len(header_bits) - 1
         mid = 0
         for b in header_bits[:8]:
             mid = (mid << 1) | b
         cid = 0
-        for b in header_bits[8:14]:
+        for b in header_bits[8:published_at]:
             cid = (cid << 1) | b
-        pub = header_bits[14]
-        parity = sum(header_bits[:15]) & 1
-        if parity != header_bits[15]:
+        pub = header_bits[published_at]
+        parity = sum(header_bits[:parity_at]) & 1
+        if parity != header_bits[parity_at]:
             self._op("header_parity_fail", count=1)
             return []  # header untrusted: this generation's bits are lost
         idx = self._payload_indices()

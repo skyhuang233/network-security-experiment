@@ -9,11 +9,13 @@ delays, methods and repeats (§8.6 pairing requirement).
 
 Paired payload sizes (§8.6):
 - COMMON conditions run every carrier at the SAME payload bytes, sized to
-  what M3 can express in ONE publication (`(K - 18 - 32) // 8` bytes) — the
+  what M3 can express in ONE publication
+  (`(K - M3_RESERVED_KEYS - 32) // 8` bytes) — the
   common conditions therefore carry literally the same information on all
   three backends and are directly comparable.
-- When that quantity is not a positive length (K < 58: 18 reserved keys +
-  32-bit stream header + 8 payload bits), the configuration is reported as
+- When that quantity is not a positive length (K < M3_MIN_K_ONE_BYTE:
+  M3_RESERVED_KEYS reserved keys + 32-bit stream header + 8 payload bits),
+  the configuration is reported as
   「协议前提不满足」 and is not scored as a Persistence failure.  The
   function must not substitute a 1-byte payload that cannot actually fit
   in one publication.
@@ -122,11 +124,12 @@ def m3_single_publication_payload_len(key_set_size: int = 128) -> int:
     M3 publishes one segment per round; after the sender stops refreshing,
     only the LAST publication remains on the key set.  A fresh receiver can
     recover, in a single read, only a message whose whole stream fits one
-    publication: 32-bit stream header + payload must fit in (K - 18) bits.
-    Larger payloads are structurally multi-round on THIS protocol
-    implementation (§6 note).
+    publication: 32-bit stream header + payload must fit in
+    (K - M3_RESERVED_KEYS) bits.  Larger payloads are structurally
+    multi-round on THIS protocol implementation (§6 note).
 
-    Returns 0 when that budget cannot hold a 1-byte payload (K < 58).
+    Returns 0 when that budget cannot hold a 1-byte payload
+    (K < M3_MIN_K_ONE_BYTE).
     0 means the single-publication premise is not met.  It is not coerced
     to 1 byte, and it must not be scored as a Persistence failure.
     """

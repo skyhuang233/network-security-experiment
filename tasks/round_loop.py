@@ -25,7 +25,6 @@ from __future__ import annotations
 import json
 import re
 import shutil
-import threading
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -210,7 +209,12 @@ class AgentRunState:
 
 
 class CaseRun:
-    """One (case, seed, method) run of the whole round loop."""
+    """One (case, seed, method) run of the whole round loop.
+
+    Execution model: one calling thread.  `_run_one_round` finishes each
+    agent's turn, including its tool calls, before the next agent starts.
+    Result persistence is a single write after the loop returns.
+    """
 
     def __init__(
         self,
@@ -241,7 +245,6 @@ class CaseRun:
         self.round_no = 0
         self.t_start: float | None = None
         self.token_totals = {"input": 0, "output": 0}
-        self._io_lock = threading.Lock()
 
     def run(self) -> dict[str, Any]:
         self.t_start = now()
@@ -297,6 +300,7 @@ class CaseRun:
         return result
 
     def _run_one_round(self) -> None:
+        # Sequential on the calling thread: agent i finishes before i+1 starts.
         for i, agent in self.agents.items():
             if agent.submitted:
                 continue
@@ -411,16 +415,15 @@ class CaseRun:
         return {"error": f"Unknown tool: {name}"}
 
     def _persist(self, result: dict[str, Any]) -> None:
-        with self._io_lock:
-            self.run_dir.mkdir(parents=True, exist_ok=True)
-            (self.run_dir / "result.json").write_text(
-                json.dumps(
-                    {**result, "config": self.config.__dict__},
-                    indent=2,
-                    ensure_ascii=False,
-                    default=str,
-                )
+        self.run_dir.mkdir(parents=True, exist_ok=True)
+        (self.run_dir / "result.json").write_text(
+            json.dumps(
+                {**result, "config": self.config.__dict__},
+                indent=2,
+                ensure_ascii=False,
+                default=str,
             )
+        )
 
 
 def _jsonable(d: dict[str, Any]) -> dict[str, Any]:
