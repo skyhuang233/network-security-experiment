@@ -32,6 +32,7 @@ from __future__ import annotations
 
 import time
 from abc import ABC, abstractmethod
+from contextlib import contextmanager
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -104,7 +105,7 @@ class OverheadStats:
     logical_bytes_written: int = 0
     logical_bytes_read: int = 0
     peak_occupancy_objects: int = 0  # files / dirs / set keys
-    peak_occupancy_bytes: int = 0
+    peak_occupancy_bytes: int | None = 0  # None = not measurable (N/A)
     cpu_time: float = 0.0
 
     def add_op(self, op: StorageOp) -> None:
@@ -125,9 +126,12 @@ class OverheadStats:
         self.peak_occupancy_objects = max(
             self.peak_occupancy_objects, other.peak_occupancy_objects
         )
-        self.peak_occupancy_bytes = max(
-            self.peak_occupancy_bytes, other.peak_occupancy_bytes
-        )
+        if self.peak_occupancy_bytes is None or other.peak_occupancy_bytes is None:
+            self.peak_occupancy_bytes = None
+        else:
+            self.peak_occupancy_bytes = max(
+                self.peak_occupancy_bytes, other.peak_occupancy_bytes
+            )
         self.cpu_time += other.cpu_time
 
 
@@ -186,7 +190,12 @@ class MeasurementLog:
         with self._lock:
             rec.attempts.append(attempt)
             rx = attempt.get("receiver")
-            if attempt.get("crc_ok") and rx is not None:
+            # §7 "first correct delivery" requires the decoded candidate to
+            # EQUAL the send-side ground truth (exact match).  CRC-16 is a
+            # protocol integrity check only: equal-length CRC collisions
+            # exist (verified: 00 10 21 vs 01 00 00 share CRC 0xfbac), so
+            # crc_ok alone must never mark a chunk delivered.
+            if attempt.get("exact_match") and rx is not None:
                 if rx not in rec.delivered:  # first correct delivery
                     rec.delivered[rx] = True
                     rec.deliver_time[rx] = float(attempt.get("time", now()))
@@ -204,6 +213,11 @@ class MeasurementLog:
         with self._lock:
             self.overhead.add_op(op)
 
+    def add_cpu(self, seconds: float) -> None:
+        """Attribute CPU time of an ACTUAL protocol/storage operation (§8.7)."""
+        with self._lock:
+            self.overhead.cpu_time += seconds
+
     def record_event(self, event: dict[str, Any]) -> None:
         with self._lock:
             event = {"time": now(), **event}
@@ -211,14 +225,20 @@ class MeasurementLog:
 
     # -- occupancy ------------------------------------------------------------
 
-    def update_peak(self, objects: int, nbytes: int) -> None:
+    def update_peak(self, objects: int, nbytes: int | None) -> None:
         with self._lock:
             self.overhead.peak_occupancy_objects = max(
                 self.overhead.peak_occupancy_objects, objects
             )
-            self.overhead.peak_occupancy_bytes = max(
-                self.overhead.peak_occupancy_bytes, nbytes
-            )
+            if nbytes is None:
+                # The backend cannot expose a measurable physical size
+                # (e.g. M2 directory entries): report N/A (null), never a
+                # fabricated zero (§8.7).
+                self.overhead.peak_occupancy_bytes = None
+            elif self.overhead.peak_occupancy_bytes is not None:
+                self.overhead.peak_occupancy_bytes = max(
+                    self.overhead.peak_occupancy_bytes, nbytes
+                )
 
     # -- run bookkeeping -------------------------------------------------------
 
@@ -275,7 +295,14 @@ class MeasurementLog:
 
 
 def hamming_distance(a: bytes, b: bytes) -> int:
-    """Bitwise Hamming distance over the aligned (min-length) prefix."""
+    """Bitwise Hamming distance over the aligned (min-length) prefix.
+
+    CAVEAT: zip() stops at the shorter input, so the result only compares
+    the common prefix.  Callers must therefore treat this as meaningful
+    ONLY for equal-length candidates (`comparable` requires
+    len(candidate) == len(truth), §8.4); a length-mismatched candidate is
+    recorded as unalignable and must never be given a zero BER.
+    """
     diff = 0
     for x, y in zip(a, b):
         diff += bin(x ^ y).count("1")
@@ -324,6 +351,12 @@ class ChannelAdapter(ABC):
 
     method: str = "?"
 
+    # Addressable message-id space per sender.  The logical frame field is
+    # 16-bit, but a carrier may be able to address fewer ids physically; the
+    # send counter wraps at this limit WITH an explicit recorded event --
+    # logical ids are never silently truncated into the physical encoding.
+    MSG_ID_LIMIT = 0x10000
+
     def __init__(
         self,
         root: str,
@@ -364,9 +397,51 @@ class ChannelAdapter(ABC):
     # ------------------------------------------------------------------ utils
 
     def _op(self, op: str, nbytes: int = 0, count: int = 1) -> None:
-        t0 = time.process_time()
+        """Register an operation MARKER with no timed physical work (e.g. a
+        policy-block decision or a corruption counter).  CPU time of real
+        storage work is attributed via `_timed_op`, never here (§8.7)."""
         self.mlog.record_storage_op(StorageOp(op=op, bytes_logical=nbytes, count=count))
-        self.mlog.overhead.cpu_time += time.process_time() - t0
+
+    @contextmanager
+    def _timed_op(self, op: str, nbytes: int = 0, count: int = 1):
+        """Time an ACTUAL storage operation (cpu) and register it.
+
+        Usage::
+
+            with self._timed_op("file_write", nbytes=len(body)):
+                ...physical work...
+
+        The timer wraps the real protocol/storage work, so `cpu_time`
+        reflects the operation itself, not the cost of logging it (§8.7).
+        """
+        t0 = time.process_time()
+        try:
+            yield
+        finally:
+            self.mlog.record_storage_op(
+                StorageOp(op=op, bytes_logical=nbytes, count=count)
+            )
+            self.mlog.add_cpu(time.process_time() - t0)
+
+    def _audit(self, op: str, agent: int, **detail: Any) -> None:
+        """Record a physical-backend audit event for monitor W (§10).
+
+        These events are the ONLY input to W's audit views.  They describe
+        what the physical backend actually observed (file bodies /
+        directory names / cache-key state) per method, never the unified
+        send_payload() plaintext parameters — W's information boundary is
+        defined by the carrier, not by the tool-call layer.
+        """
+        self.mlog.record_event(
+            {
+                "event": "storage_audit",
+                "method": self.method,
+                "op": op,
+                "agent": agent,
+                "round": self.current_round,
+                **detail,
+            }
+        )
 
     def set_round(self, round_: int) -> None:
         self.current_round = round_
@@ -390,7 +465,24 @@ class ChannelAdapter(ABC):
 
         msg_id = self._next_msg_id[sender]
         frames, nxt = F.chunk_bytes(data, msg_id)
-        self._next_msg_id[sender] = nxt & 0xFFFF
+        # Carrier-addressing check BEFORE anything is staged (no partial
+        # staging, no silent truncation): a carrier whose physical encoding
+        # cannot address a frame's logical fields must reject it outright.
+        self._validate_frames(frames)
+        if nxt >= self.MSG_ID_LIMIT:
+            # explicit, recorded wrap of the sender's message-id space --
+            # never a silent aliasing.  Ids are finite per carrier; reuse
+            # may collide with still-live physical state, which the
+            # fire-and-forget protocol does not detect.
+            self.mlog.record_event(
+                {
+                    "event": "carrier_msg_id_wrap",
+                    "sender": sender,
+                    "round": self.current_round,
+                    "limit": self.MSG_ID_LIMIT,
+                }
+            )
+        self._next_msg_id[sender] = nxt % self.MSG_ID_LIMIT
 
         for fr in frames:
             rec = self.mlog.register_send(
@@ -413,6 +505,15 @@ class ChannelAdapter(ABC):
             "chunks": len(frames),
             "payload_bytes": len(data),
         }
+
+    def _validate_frames(self, frames: list[F.Frame]) -> None:
+        """Reject frames this carrier cannot physically address.
+
+        The default implementation accepts everything (the logical frame
+        fields are 16-bit and the base send counter wraps at MSG_ID_LIMIT).
+        A carrier with narrower physical fields (e.g. M3's reduced header)
+        overrides this and raises ValueError -- which the round loop reports
+        to the agent as a tool error instead of silently truncating ids."""
 
     @abstractmethod
     def _stage_frame(self, sender: int, fr: F.Frame) -> bool:
@@ -493,7 +594,15 @@ class ChannelAdapter(ABC):
         if rec is None:
             return  # unalignable to any sent chunk; flows into loss counts
         truth = self._truth.get((sender, wf.msg_id, wf.chunk_id))
-        comparable = truth is not None
+        # §7/§8.4: "correct delivery" and BER comparability are defined
+        # against the send-side ground truth:
+        #   exact_match  candidate == truth (required for delivery)
+        #   comparable   lengths align (required for a meaningful BER; a
+        #                length-mismatched candidate is unalignable and
+        #                must never be assigned a zero BER)
+        # CRC-16 remains a protocol integrity check only.
+        exact_match = truth is not None and wf.payload == truth
+        comparable = truth is not None and len(wf.payload) == len(truth)
         self.mlog.record_attempt(
             rec,
             {
@@ -502,7 +611,9 @@ class ChannelAdapter(ABC):
                 "time": now(),
                 "candidate_hex": wf.payload.hex(),
                 "crc_ok": wf.crc_ok,
+                "exact_match": exact_match,
                 "comparable": comparable,
+                "length_mismatch": truth is not None and not comparable,
                 "hamming": hamming_distance(truth, wf.payload) if comparable else None,
             },
         )
@@ -515,8 +626,13 @@ class ChannelAdapter(ABC):
     def update_peak_occupancy(self) -> None:
         self.mlog.update_peak(*self._occupancy())
 
-    def _occupancy(self) -> tuple[int, int]:
-        """(object_count, byte_total) currently held in live state."""
+    def _occupancy(self) -> tuple[int, int | None]:
+        """(object_count, byte_total | None) currently held in live state.
+
+        byte_total is the ACTUAL physical storage occupancy, or None when
+        the backend does not expose a measurable size (never a fabricated
+        zero, §8.7).
+        """
         return 0, 0
 
 

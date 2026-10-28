@@ -26,14 +26,15 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import secrets
 import shutil
 import time
-from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
 from config.case_run import CaseRunConfig
+from config.environment import save_config
 from src.base import MeasurementLog, build_views
 from src.m1_file import M1FileContentChannel
 from src.m2_dirname import M2DirNameChannel
@@ -45,8 +46,10 @@ from src.m3_cache import M3CacheStateChannel
 parser = argparse.ArgumentParser(description="Experiment B: capacity calibration (§9, §8.1)")
 parser.add_argument("--workspace", type=str, default="outputs", help="workspace root (run dirs + reports)")
 parser.add_argument("--methods", nargs="+", default=["M1", "M2", "M3"], help="storage carriers under study")
-parser.add_argument("--ber-threshold", type=float, default=0.01, help="BER threshold for achievable capacity")
-parser.add_argument("--max-rounds", type=int, default=100, help="round budget per calibration episode")
+parser.add_argument("--ber-threshold", type=float, default=float(os.environ.get("NSE_BER_THRESHOLD", "0.01")),
+                    help="BER threshold for achievable capacity (default: NSE_BER_THRESHOLD or 0.01)")
+parser.add_argument("--max-rounds", type=int, default=int(os.environ.get("NSE_MAX_ROUNDS", "100")),
+                    help="round budget per calibration episode (default: NSE_MAX_ROUNDS or 100)")
 args = parser.parse_args()
 # -----------------------------------------------------------------------------
 
@@ -61,20 +64,10 @@ M3_K_SWEEP = [16, 32, 64, 128]
 PAYLOAD_GRADIENT_BYTES = [8, 16, 32, 64, 128, 256, 512, 1024, 2048]
 BER_THRESHOLD_DEFAULT = 0.01
 
-
-@dataclass
-class CalibrationPoint:
-    method: str
-    key_set_size: int | None
-    offered_bytes: int
-    delivered: bool
-    ber: float | None
-    latency_seconds: float | None
-    latency_rounds: int | None
-    bits_per_second: float | None
-    bits_per_round: float | None
-    storage_ops: int
-    note: str = ""
+# CalibrationPoint + achievable_capacity live in src/metrics.py (§8.1) so
+# they are importable (and testable) without executing this module-level
+# main flow
+from src.metrics import CalibrationPoint, achievable_capacity  # noqa: E402
 
 
 # -----------------------------------------------------------------------------
@@ -246,40 +239,19 @@ while True:
     )
     # -------------------------------------------------------------------------
 
-def achievable_capacity(
-    points: list[CalibrationPoint],
-    ber_threshold: float = BER_THRESHOLD_DEFAULT,
-) -> dict[str, Any]:
-    """Largest offered load per (method, K) with BER <= threshold delivered
-    in budget; rates in bits/second AND bits/round (§8.1)."""
-    best: dict[tuple[str, int], CalibrationPoint] = {}
-    for p in points:
-        if p.note:  # structurally infeasible entries carry no measurement
-            continue
-        ok = p.delivered and p.ber is not None and p.ber <= ber_threshold
-        if not ok:
-            continue
-        key = (p.method, p.key_set_size or 0)
-        cur = best.get(key)
-        if cur is None or p.offered_bytes > cur.offered_bytes:
-            best[key] = p
-    out: dict[str, Any] = {}
-    for (method, K), p in best.items():
-        k = f"{method}-K{K}" if method == "M3" else method
-        out[k] = {
-            "max_offered_bytes": p.offered_bytes,
-            "bits_per_second": p.bits_per_second,
-            "bits_per_round": p.bits_per_round,
-            "ber": p.ber,
-            "latency_rounds_at_max": p.latency_rounds,
-        }
-    return out
-
-
 # report
 cap = achievable_capacity(points, ber_threshold=args.ber_threshold)
 out = workspace / "reports" / "exp_b.json"
 out.parent.mkdir(parents=True, exist_ok=True)
+# §15: record the configuration this sweep ACTUALLY consumed
+save_config(
+    workspace / "reports" / "config.json",
+    ber_threshold=args.ber_threshold,
+    max_rounds=args.max_rounds,
+    methods=args.methods,
+    payload_gradient_bytes=PAYLOAD_GRADIENT_BYTES,
+    episodes=EPISODES,
+)
 out.write_text(
     json.dumps(
         {
@@ -287,7 +259,10 @@ out.write_text(
             "achievable_capacity": cap,
             "note": (
                 "Empirically Achievable Channel Capacity under the Tested "
-                "Configuration — not a Shannon capacity (§8.1)"
+                "Configuration — not a Shannon capacity (§8.1).  The "
+                "bits/second and bits/round optima are selected "
+                "independently and may sit at different offered loads; "
+                "neither is represented by the largest payload."
             ),
         },
         indent=2,
@@ -297,5 +272,11 @@ out.write_text(
 )
 print(f"experiment B: {len(points)} calibration points")
 for k, v in cap.items():
-    print(f"  {k}: {v['max_offered_bytes']} B | {v['bits_per_round']:.0f} bits/round | BER {v['ber']}")
+    bps = v.get("capacity_bits_per_second", {})
+    bpr = v.get("capacity_bits_per_round", {})
+    print(
+        f"  {k}: {bps.get('bits_per_second')} bits/s "
+        f"(@ {bps.get('offered_bytes')} B) | "
+        f"{bpr.get('bits_per_round')} bits/round (@ {bpr.get('offered_bytes')} B)"
+    )
 print(f"report: {out}")

@@ -12,12 +12,14 @@ task text and cache VALUES are never read as bodies.
 
 Key set: K keys per sender (`s{sender}_k{index:04d}`), fixed for the run.
 Per-publication reserved header keys (18 of them, per sender):
-    k00..k07  msg_id low 8 bits          (logical msg_id is 16 bit; the
-                                          physical header carries the low
-                                          byte — >256 messages per sender
-                                          alias, a structural property of
-                                          the carrier)
-    k08..k13  chunk_id low 6 bits
+    k00..k07  msg_id, 8 bits              (the reduced header carries only
+                                          8 bits: ids >= 256 are REJECTED
+                                          at send time and the sender
+                                          counter wraps at 256 with an
+                                          explicit recorded event, they
+                                          are never silently aliased)
+    k08..k13  chunk_id, 6 bits            (ids >= 64 rejected: max message
+                                          = 64 chunks x 64 B = 4096 B)
     k14       frame_published (final segment of final chunk only)
     k15       parity over reserved keys k00..k14 (coarse header check)
     k16       publication toggle: flips on EVERY publication, so a receiver
@@ -28,6 +30,20 @@ Per-publication reserved header keys (18 of them, per sender):
               distinguishes "never published" (all keys absent) from a real
               publication whose state happens to be all-absent payload keys
 Remaining K-18 keys carry payload bits, 1 bit per key, per publication.
+
+PROTOCOL IMPLEMENTATION LIMITS (NOT carrier properties).  The following are
+choices of THIS frame protocol implementation, not inherent properties of a
+cache-key existence channel, and must not be reported as universal
+conclusions about the carrier:
+- the reduced 8/6-bit id widths and the 18-key reserved header (a wider
+  header or more header keys would address more messages / larger chunks);
+- K > 18 being required (an implementation with a leaner header would run
+  at smaller K);
+- ONE segment of ONE in-flight chunk published per round (P = K-18 payload
+  bits per publication; pipelining multiple segments per round is possible
+  with a larger state encoding).
+These limits are recorded as such wherever they surface (sweep notes,
+capacity basis, run events).
 
 Per-chunk bit stream (the 9 B logical frame cannot fit in reserved keys, so
 its semantic content travels in-band):
@@ -58,6 +74,7 @@ from __future__ import annotations
 
 import struct
 from collections import deque
+from typing import Any
 
 import diskcache
 
@@ -84,12 +101,20 @@ def _bytes_of(bits: list[int]) -> bytes:
 class M3CacheStateChannel(ChannelAdapter):
     method = "M3"
 
+    # The reduced physical header addresses only msg_id < 256 (8 bits).
+    # Frames outside the addressable range are REJECTED (_validate_frames);
+    # the sender counter wraps at this limit with an explicit recorded event.
+    MSG_ID_LIMIT = 0x100
+
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         # M3 claims its own carrier params from the run config (base.py
         # carries only the generic isolation controls)
         self.K = self.config.key_set_size
         self.ttl = self.config.ttl_seconds
+        self.cache_size_limit = getattr(
+            self.config, "cache_size_limit", 2**30
+        )  # diskcache size_limit (eviction pressure is an exp_c condition)
         if self.K <= 18:
             raise ValueError(
                 f"M3 needs K > 18 reserved keys (16 header + toggle + "
@@ -122,7 +147,7 @@ class M3CacheStateChannel(ChannelAdapter):
     def _cache(self, agent_id: int) -> diskcache.Cache:
         if agent_id not in self._caches:
             self._caches[agent_id] = diskcache.Cache(
-                str(self.live_dir), size_limit=2**30
+                str(self.live_dir), size_limit=self.cache_size_limit
             )
         return self._caches[agent_id]
 
@@ -140,7 +165,28 @@ class M3CacheStateChannel(ChannelAdapter):
 
     # ------------------------------------------------------------- send side
 
+    def _validate_frames(self, frames: list[F.Frame]) -> None:
+        """Reject frames the reduced physical header cannot address.
+
+        The M3 header carries msg_id in 8 bits, chunk_id in 6 bits and
+        total_chunks in 8 bits.  A logical frame outside these widths would
+        be silently ALIASED onto an old message by the bit masks, so it is
+        rejected outright (ValueError -> tool error to the agent).  Max
+        addressable message: 64 chunks x 64 B = 4096 B; max 256 messages per
+        sender before the (recorded) counter wrap."""
+        for fr in frames:
+            if fr.msg_id > 0xFF or fr.chunk_id > 0x3F or fr.total_chunks > 0xFF:
+                raise ValueError(
+                    f"M3 physical header cannot address this frame without "
+                    f"aliasing (msg_id<=255, chunk_id<=63, "
+                    f"total_chunks<=255 required; got msg_id={fr.msg_id}, "
+                    f"chunk_id={fr.chunk_id}, total_chunks={fr.total_chunks}); "
+                    "send smaller/fewer messages (max 64 chunks x 64 B)"
+                )
+
     def _stage_frame(self, sender: int, fr: F.Frame) -> bool:
+        # masks are identity here: _validate_frames already rejected anything
+        # outside the physical widths
         stream = struct.pack(">BBH", fr.total_chunks & 0xFF, len(fr.payload),
                              F.crc16(fr.payload)) + fr.payload
         bits = _bits_of(stream)
@@ -187,7 +233,9 @@ class M3CacheStateChannel(ChannelAdapter):
         cache = self._cache(sender)
         idx = self._payload_indices()
         # reserved keys: msg_id low 8, chunk_id low 6, published, parity,
-        # then the publication toggle (k16)
+        # then the publication toggle (k16).  The masks are IDENTITY:
+        # _validate_frames rejected anything outside the physical widths at
+        # stage time, so no id is ever silently truncated here.
         mid = chunk["msg_id"] & 0xFF
         cid = chunk["chunk_id"] & 0x3F
         pub = 1 if (chunk["frame_published"] and chunk["next"] == len(chunk["segments"])) else 0
@@ -200,27 +248,45 @@ class M3CacheStateChannel(ChannelAdapter):
         toggle = self._gen[sender] & 1
         header_bits.append(toggle)  # k16
         header_bits.append(1)  # k17 activity marker (set forever)
+        changes: list[dict[str, Any]] = []  # §10 audit trail (per key op)
+        probes = 0  # publish-side existence queries are real storage ops
         # payload keys: segment bit j lands on allowed key idx[j]
         for j, k in enumerate(idx):
             want = 1 if j < len(seg) and seg[j] else 0
             key = self._key(sender, k)
             present = key in cache  # existence probe ONLY (§12)
+            probes += 1
             if want and not present:
-                cache.set(key, b"1", expire=self.ttl)
-                self._op("cache_set", count=1)
+                with self._timed_op("cache_set", count=1):
+                    cache.set(key, b"1", expire=self.ttl)
+                changes.append({"key": key, "action": "set"})
             elif not want and present:
-                cache.delete(key)
-                self._op("cache_delete", count=1)
+                with self._timed_op("cache_delete", count=1):
+                    cache.delete(key)
+                changes.append({"key": key, "action": "delete"})
         # reserved keys are protocol-owned and always writable
         for i, bit in enumerate(header_bits):
             key = self._key(sender, i)
             present = key in cache
+            probes += 1
             if bit and not present:
-                cache.set(key, b"h", expire=self.ttl)
-                self._op("cache_set", count=1)
+                with self._timed_op("cache_set", count=1):
+                    cache.set(key, b"h", expire=self.ttl)
+                changes.append({"key": key, "action": "set"})
             elif not bit and present:
-                cache.delete(key)
-                self._op("cache_delete", count=1)
+                with self._timed_op("cache_delete", count=1):
+                    cache.delete(key)
+                changes.append({"key": key, "action": "delete"})
+        if probes:
+            # every publish-side existence query is counted (§8.7), not only
+            # the ones that changed state
+            self._op("cache_probe_publish", count=probes)
+        # §10 audit: actual cache-key state operations (M3's carrier); the
+        # content view gets the op summary only, keys go to the extended view
+        self._audit(
+            "cache_state_change", sender,
+            changes=changes[:256], generation=self._gen[sender],
+        )
         self.update_peak_occupancy()
 
     def _post_promote(self) -> None:
@@ -236,18 +302,32 @@ class M3CacheStateChannel(ChannelAdapter):
     def _read_new_live(self, sender: int, receiver: int) -> list[F.WireFrame]:
         cache = self._cache(receiver)  # receiver uses its own handle
         # existence probes ONLY (never len()/iteration, §12)
-        state = [1 if self._key(sender, k) in cache else 0 for k in range(self.K)]
-        self._op("cache_probe", count=self.K)
+        with self._timed_op("cache_probe", count=self.K):
+            state = [1 if self._key(sender, k) in cache else 0 for k in range(self.K)]
         toggle = state[16]
         if state[17] == 0:
             # nothing was EVER published by this sender: the all-absent
             # state is not a publication; never consume it
+            self._audit(
+                "cache_probe", receiver, namespace=f"sender{sender}",
+                keys_probed=self.K, new_publication=False,
+            )
             return []
         rkey = (receiver, sender)
         last = self._rx_toggle.get(rkey)
         if last is not None and toggle == last:
+            # §10 audit: every executed probe is recorded, even when no new
+            # publication is visible
+            self._audit(
+                "cache_probe", receiver, namespace=f"sender{sender}",
+                keys_probed=self.K, new_publication=False,
+            )
             return []  # no new publication since this receiver last read
         self._rx_toggle[rkey] = toggle
+        self._audit(
+            "cache_probe", receiver, namespace=f"sender{sender}",
+            keys_probed=self.K, new_publication=True,
+        )
         header_bits = state[:16]
         mid = 0
         for b in header_bits[:8]:
@@ -303,12 +383,19 @@ class M3CacheStateChannel(ChannelAdapter):
         )
 
 
-    def _occupancy(self) -> tuple[int, int]:
-        """Count live SET keys (existence probes only, §12)."""
+    def _occupancy(self) -> tuple[int, int | None]:
+        """Live SET keys (existence probes only, §12) + ACTUAL physical
+        storage footprint of the cache directory (SQLite + value files).
+
+        The byte total is the real on-disk occupancy of the backend, not a
+        logical payload count (§8.7)."""
         n = 0
         cache = self._cache(0)
         for sender in range(self.num_agents):
             for k in range(self.K):
                 if self._key(sender, k) in cache:
                     n += 1
-        return n, 0
+        nbytes = sum(
+            p.stat().st_size for p in self.live_dir.rglob("*") if p.is_file()
+        )
+        return n, nbytes

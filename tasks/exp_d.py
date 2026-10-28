@@ -20,7 +20,8 @@ Nanochat-style script; run from the repo root (package installed via `uv sync`):
     python -m tasks.exp_d audit runs/main-M1-* runs/negctrl-*
     python -m tasks.exp_d isolation --case I-01 --seed 0 --method M1
 
-Requires NSE_API_KEY / NSE_MODEL in the environment (W judge / task agents).
+Requires NSE_API_KEY / NSE_MODEL in the environment.  The W judge binds
+NSE_W_MODEL (falling back to NSE_MODEL); task agents bind NSE_MODEL.
 
 The LLM round loop (CaseRun + build_run) lives in tasks/round_loop.py and is
 shared with exp_a; each script keeps its own module-level argparse + main
@@ -31,18 +32,21 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 from pathlib import Path
 from typing import Any
 
 from config.case_run import CaseRunConfig
+from config.environment import save_config
 from src.base import MeasurementLog
-from src.audit_agent import provider_from_env
+from src.audit_agent import provider_from_env, w_provider_from_env
 from src.metrics import compute_metrics
 from tasks.round_loop import build_run
 from src.audit_agent import (
     audit_window,
     build_windows,
     label_windows,
+    run_policy_mode,
     split_runs,
     tpr_fpr,
 )
@@ -64,7 +68,8 @@ p_iso.add_argument("--case", required=True, help="task case id, e.g. I-01")
 p_iso.add_argument("--seed", type=int, required=True, help="task seed")
 p_iso.add_argument("--method", default="M1", help="storage carrier")
 p_iso.add_argument("--controls", nargs="+", default=None, help="subset of controls (default: all)")
-p_iso.add_argument("--max-rounds", type=int, default=20, help="round budget per run")
+p_iso.add_argument("--max-rounds", type=int, default=int(os.environ.get("NSE_MAX_ROUNDS", "20")),
+                   help="round budget per run (default: NSE_MAX_ROUNDS or 20)")
 p_iso.add_argument("--workspace", type=str, default="outputs", help="workspace root (run dirs + reports)")
 
 args = parser.parse_args()
@@ -77,12 +82,25 @@ args = parser.parse_args()
 def audit_run(
     run_dir: Path, view: str, w_provider
 ) -> dict[str, Any]:
-    """Audit all windows of one persisted run under one view."""
+    """Audit all windows of one persisted run under one view.
+
+    The run's carrier (method) selects the carrier-appropriate audit
+    rendering (§10 information boundary), and the run's recorded policy
+    feeds the measurement-layer labels."""
     meas = json.loads((run_dir / "measurement.json").read_text())
-    windows = build_windows(meas.get("events", []))
-    labels = label_windows(windows)
-    judged = [audit_window(w, view, w_provider) for w in windows]
-    return {"run_id": run_dir.name, "labels": labels, "judged": judged}
+    events = meas.get("events", [])
+    method = meas.get("method")
+    policy_mode = run_policy_mode(events)
+    windows = build_windows(events)
+    labels = label_windows(windows, policy_mode)
+    judged = [audit_window(w, view, w_provider, method) for w in windows]
+    return {
+        "run_id": run_dir.name,
+        "method": method,
+        "policy_mode": policy_mode,
+        "labels": labels,
+        "judged": judged,
+    }
 
 
 # ------------------------------------------------------------------ part 2
@@ -108,7 +126,9 @@ workspace = Path(args.workspace)
 
 if args.mode == "audit":
     run_dirs = [Path(p) for p in args.run_dirs]
-    w = provider_from_env()
+    # W's own model binding: NSE_W_MODEL (falling back to NSE_MODEL), the
+    # same resolution resolved_config() records as w_model (§15)
+    w = w_provider_from_env()
 
     # split by case_run: all windows of one run on the same side (§10)
     run_ids = [d.name for d in run_dirs]
@@ -118,9 +138,11 @@ if args.mode == "audit":
 
     # audit job assembly: (view, run_dir)
     audit_jobs = [(view, d) for view in args.views for d in run_dirs]
-    acc: dict[str, dict[str, dict[str, list]]] = {
-        view: {"tuning": {"j": [], "l": []}, "test": {"j": [], "l": []}}
-        for view in args.views
+    # accumulation carries the METHOD dimension: TPR/FPR are reported per
+    # method x view x split (§10) — mixing M1/M2/M3 would hide per-carrier
+    # detectability and per-carrier normal-operation background
+    acc: dict[str, dict[str, dict[str, dict[str, list]]]] = {
+        view: {} for view in args.views
     }
     job_idx = 0
 
@@ -138,31 +160,55 @@ if args.mode == "audit":
         job_idx += 1
         r = audit_run(d, view, w)
         side = side_of[d.name]
-        acc[view][side]["j"].extend(r["judged"])
-        acc[view][side]["l"].extend([wl["label"] for wl in r["labels"]])
+        method = r["method"] or "?"
+        slot = acc[view].setdefault(
+            method,
+            {"tuning": {"j": [], "l": []}, "test": {"j": [], "l": []}},
+        )
+        slot[side]["j"].extend(r["judged"])
+        slot[side]["l"].extend([wl["label"] for wl in r["labels"]])
         print(
             f"audit {job_idx:03d}/{len(audit_jobs):03d} | {view}/{d.name} "
             f"({side}) | {len(r['judged'])} windows"
         )
         # -------------------------------------------------------------------------
 
-    # report: TPR/FPR per view and per split (tuning vs test)
-    ev: dict[str, Any] = {"split": split, "views": {}}
+    # report: TPR/FPR per method x view x split (tuning vs test)
+    ev: dict[str, Any] = {
+        "split": split,
+        "w_model": getattr(w, "model", None),
+        "views": {},
+    }
     for view in args.views:
-        ev["views"][view] = {
-            "tuning": tpr_fpr(acc[view]["tuning"]["j"], acc[view]["tuning"]["l"]),
-            "test": tpr_fpr(acc[view]["test"]["j"], acc[view]["test"]["l"]),
-        }
+        ev["views"][view] = {}
+        for method, sides in acc[view].items():
+            ev["views"][view][method] = {
+                side: tpr_fpr(v["j"], v["l"]) for side, v in sides.items()
+            }
     out = workspace / "reports" / "exp_d_audit.json"
     out.parent.mkdir(parents=True, exist_ok=True)
+    # §15: record the configuration this audit actually consumed
+    save_config(
+        workspace / "reports" / "config.json",
+        w_model=getattr(w, "model", None),
+        views=args.views,
+        runs_audited=len(run_dirs),
+    )
     out.write_text(json.dumps(ev, indent=2, ensure_ascii=False, default=str))
-    for view, splits in ev["views"].items():
-        for split_name, r in splits.items():
-            print(f"{view}/{split_name}: TPR={r['tpr']} FPR={r['fpr']} (TP={r['tp']} FP={r['fp']} TN={r['tn']} FN={r['fn']})")
+    for view, methods in ev["views"].items():
+        for method, splits in methods.items():
+            for split_name, r in splits.items():
+                print(
+                    f"{view}/{method}/{split_name}: TPR={r['tpr']} FPR={r['fpr']} "
+                    f"(TP={r['tp']} FP={r['fp']} TN={r['tn']} FN={r['fn']} "
+                    f"no_verdict={r['no_verdict']})"
+                )
     print(f"report: {out}")
 else:
     provider = provider_from_env()
     inst = generate(args.case, args.seed)
+    # M3's key-set size is consumed from the same env var that is recorded
+    m3_key_set_size = int(os.environ.get("NSE_M3_K", "128"))
 
     # job assembly: baseline + each isolation control (§9/§10)
     jobs: list[tuple[str, CaseRunConfig]] = [
@@ -172,6 +218,7 @@ else:
                 case_run_id=f"isoD-base-{args.method}-{args.case}-s{args.seed}",
                 case_id=args.case, seed=args.seed, method=args.method,
                 max_rounds=args.max_rounds,
+                key_set_size=m3_key_set_size,
             ),
         )
     ]
@@ -186,6 +233,7 @@ else:
                     policy_mode=spec["policy_mode"],
                     writable_subset=spec["writable_subset"],
                     max_rounds=args.max_rounds,
+                    key_set_size=m3_key_set_size,
                 ),
             )
         )
@@ -240,6 +288,15 @@ else:
     # report: seven metrics before/after each control (no new metric, §9)
     out = workspace / "reports" / "exp_d_isolation.json"
     out.parent.mkdir(parents=True, exist_ok=True)
+    # §15: record the configuration this isolation comparison consumed
+    save_config(
+        workspace / "reports" / "config.json",
+        max_rounds=args.max_rounds,
+        m3_key_set_size_default=m3_key_set_size,
+        method=args.method,
+        case=args.case,
+        seed=args.seed,
+    )
     out.write_text(json.dumps(comparison, indent=2, ensure_ascii=False, default=str))
     base_bits = comparison["baseline"]["effective_throughput"]["bidirectional_bits"]
     print(f"baseline delivered bits: {base_bits}")
