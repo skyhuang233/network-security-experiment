@@ -66,7 +66,11 @@ BER_THRESHOLD_DEFAULT = 0.01
 # CalibrationPoint + achievable_capacity live in src/metrics.py (§8.1) so
 # they are importable (and testable) without executing this module-level
 # main flow
-from src.metrics import CalibrationPoint, achievable_capacity  # noqa: E402
+from src.metrics import (  # noqa: E402
+    CalibrationPoint,
+    achievable_capacity,
+    bit_error_rate,
+)
 
 
 # -----------------------------------------------------------------------------
@@ -185,19 +189,10 @@ while True:
         print(f"calib {job_idx:03d}/{len(sweep):03d} | {run_id} | {e}")
         continue
 
-    # BER over all comparable delivery attempts of this job
-    chunks = list(mlog.chunks.values())
-    ber = None
-    comparable = [a for c in chunks for a in c.attempts if a.get("comparable")]
-    bits = sum(
-        8 * c.payload_len
-        for c in chunks
-        for a in c.attempts
-        if a.get("comparable")
-    )
-    if comparable and bits:
-        dh = sum(a["hamming"] or 0 for a in comparable)
-        ber = dh / bits
+    # BER: the unified §8.4 definition (one representative candidate per
+    # chunk/receiver), never a second ad-hoc accumulation over attempts
+    meas = mlog.to_dict()
+    ber = bit_error_rate(meas)["ber_total"]
     window = (mlog.t_end or 0) - (mlog.t_start or 0) or None
     all_delivered = episodes_delivered == EPISODES
     points.append(
@@ -230,7 +225,7 @@ while True:
     )
     run_dir.mkdir(parents=True, exist_ok=True)
     (run_dir / "measurement.json").write_text(
-        json.dumps(mlog.to_dict(), indent=2, ensure_ascii=False, default=str)
+        json.dumps(meas, indent=2, ensure_ascii=False, default=str)
     )
     print(
         f"calib {job_idx:03d}/{len(sweep):03d} | {run_id} | "
