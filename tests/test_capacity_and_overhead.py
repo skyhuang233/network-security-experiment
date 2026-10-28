@@ -3,7 +3,10 @@
 from __future__ import annotations
 
 import tempfile
+import time
 import unittest
+from contextlib import contextmanager
+from unittest.mock import patch
 
 from config.case_run import CaseRunConfig
 from src.base import MeasurementLog, build_views
@@ -109,6 +112,71 @@ class OverheadInvariantsTest(unittest.TestCase):
             # K - 18 payload keys + 18 header keys probed per publication
             self.assertEqual(ops.get("cache_probe_publish", 0), 64)
             self.assertGreaterEqual(ops.get("cache_set", 0), 1)
+
+    def test_operation_cpu_excludes_log_registration(self) -> None:
+        # The physical write is real but tiny.  Logging is given a known
+        # CPU burn.  That burn must not show up as operation CPU.
+        with tempfile.TemporaryDirectory() as td:
+            from src.m1_file import M1FileContentChannel
+
+            config = CaseRunConfig(
+                case_run_id="t", case_id="x", seed=0, method="M1"
+            )
+            mlog = MeasurementLog("M1", "t")
+            adapter = M1FileContentChannel(root=td, measurement=mlog, config=config)
+            views = build_views(adapter, config)
+            burn = 0.05
+            calls = {"n": 0}
+            orig = MeasurementLog.record_storage_op
+
+            def slow(self, op):
+                calls["n"] += 1
+                t = time.process_time()
+                while time.process_time() - t < burn:
+                    pass
+                return orig(self, op)
+
+            adapter.set_round(1)
+            with patch.object(MeasurementLog, "record_storage_op", slow):
+                adapter.send_payload(0, b"payload", view=views[0])
+            self.assertGreaterEqual(calls["n"], 1)
+            self.assertLess(mlog.overhead.cpu_time, burn * 0.5)
+
+    def test_m3_publish_probe_runs_inside_timed_op(self) -> None:
+        # Receive-side probes are timed.  Publish-side existence checks
+        # must be timed too, not only counted after the fact.
+        with tempfile.TemporaryDirectory() as td:
+            config = CaseRunConfig(
+                case_run_id="t", case_id="x", seed=0, method="M3",
+                key_set_size=64,
+            )
+            mlog = MeasurementLog("M3", "t")
+            adapter = M3CacheStateChannel(root=td, measurement=mlog, config=config)
+            views = build_views(adapter, config)
+            current = {"op": None}
+            seen: list[str | None] = []
+            orig_timed = adapter._timed_op
+
+            @contextmanager
+            def wrapped(op, nbytes=0, count=1):
+                current["op"] = op
+                with orig_timed(op, nbytes=nbytes, count=count):
+                    yield
+                current["op"] = None
+
+            cache = adapter._cache(0)
+            orig_contains = type(cache).__contains__
+
+            def tracking_contains(self, key):
+                seen.append(current["op"])
+                return orig_contains(self, key)
+
+            adapter._timed_op = wrapped
+            adapter.set_round(1)
+            with patch.object(type(cache), "__contains__", tracking_contains):
+                adapter.send_payload(0, b"payload", view=views[0])
+                adapter.publish_round_end()
+            self.assertEqual(seen.count("cache_probe_publish"), 64)
 
     def test_m2_empty_scan_still_counts_dir_list(self) -> None:
         # polling a namespace with nothing new is a real operation and must

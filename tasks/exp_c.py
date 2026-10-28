@@ -9,9 +9,14 @@ delays, methods and repeats (§8.6 pairing requirement).
 
 Paired payload sizes (§8.6):
 - COMMON conditions run every carrier at the SAME payload bytes, sized to
-  what M3 can express in ONE publication (`(K - 18 - 32) / 8` bytes) — the
+  what M3 can express in ONE publication (`(K - 18 - 32) // 8` bytes) — the
   common conditions therefore carry literally the same information on all
   three backends and are directly comparable.
+- When that quantity is not a positive length (K < 58: 18 reserved keys +
+  32-bit stream header + 8 payload bits), the configuration is reported as
+  「协议前提不满足」 and is not scored as a Persistence failure.  The
+  function must not substitute a 1-byte payload that cannot actually fit
+  in one publication.
 - The per-method NATIVE size (M1/M2 at --payload-bytes, M3 at its
   single-publication maximum) is a SEPARATE condition (native-size), never
   silently mixed into the common comparison: M3's single-publication bound
@@ -71,6 +76,7 @@ from src.base import MeasurementLog, build_views
 from src.m1_file import M1FileContentChannel
 from src.m2_dirname import M2DirNameChannel
 from src.m3_cache import M3CacheStateChannel
+from src.frame import M3_RESERVED_KEYS
 from src.metrics import compute_metrics
 
 # -----------------------------------------------------------------------------
@@ -102,19 +108,61 @@ ADAPTERS = {
 # ------------------------------------------------------------- exp_c helpers
 
 
+# Stream header is total_chunks u8 + payload_len u8 + crc16 u16.
+_M3_STREAM_HEADER_BITS = 32
+_M3_MIN_PAYLOAD_BITS = 8  # one positive payload byte
+M3_MIN_K_ONE_BYTE = (
+    M3_RESERVED_KEYS + _M3_STREAM_HEADER_BITS + _M3_MIN_PAYLOAD_BITS
+)  # 58
+
+
 def m3_single_publication_payload_len(key_set_size: int = 128) -> int:
     """Max payload bytes recoverable by ONE delayed read on M3 (§8.6).
 
     M3 publishes one segment per round; after the sender stops refreshing,
     only the LAST publication remains on the key set.  A fresh receiver can
-    therefore recover, in a single read, only a message whose whole stream
-    fits one publication:  4 B stream header + payload must fit
-    (K - 16 reserved) bits.  Larger payloads are structurally multi-round on
-    THIS protocol implementation (§6 note) — a delayed single read losing
-    them is a protocol property, recorded as such, not a defect.
+    recover, in a single read, only a message whose whole stream fits one
+    publication: 32-bit stream header + payload must fit in (K - 18) bits.
+    Larger payloads are structurally multi-round on THIS protocol
+    implementation (§6 note).
+
+    Returns 0 when that budget cannot hold a 1-byte payload (K < 58).
+    0 means the single-publication premise is not met.  It is not coerced
+    to 1 byte, and it must not be scored as a Persistence failure.
     """
-    p_bits = key_set_size - 18
-    return max(1, (p_bits - 32) // 8)
+    payload_bits = (key_set_size - M3_RESERVED_KEYS) - _M3_STREAM_HEADER_BITS
+    if payload_bits < _M3_MIN_PAYLOAD_BITS:
+        return 0
+    return payload_bits // 8
+
+
+def m3_persistence_precondition(key_set_size: int) -> dict[str, Any] | None:
+    """None when a positive single-publication payload exists.
+
+    Otherwise a report fragment.  `logically_recovered` is None so the
+    configuration is not a failed recovery.
+    """
+    n = m3_single_publication_payload_len(key_set_size)
+    if n >= 1:
+        return None
+    summary = (
+        "协议前提不满足: this protocol cannot carry a positive-length "
+        f"payload in one M3 publication at K={key_set_size} "
+        f"(1 byte needs K>={M3_MIN_K_ONE_BYTE}: "
+        f"{M3_RESERVED_KEYS} reserved + {_M3_STREAM_HEADER_BITS}-bit stream "
+        f"header + {_M3_MIN_PAYLOAD_BITS} payload bits). "
+        "Not counted as a Persistence failure."
+    )
+    return {
+        "curve": [],
+        "summary": summary,
+        "precondition_met": False,
+        "counted_as_persistence_failure": False,
+        "logically_recovered": None,
+        "key_set_size": key_set_size,
+        "single_publication_payload_bytes": 0,
+        "minimum_k_for_one_byte_payload": M3_MIN_K_ONE_BYTE,
+    }
 
 
 def payload_info(payload: bytes) -> dict[str, Any]:
@@ -259,18 +307,37 @@ def summarize_curve(points: list[dict[str, Any]]) -> dict[str, Any]:
 # same information on every carrier.
 
 m3_native_len = m3_single_publication_payload_len(args.m3_k)
-common_len = min(args.payload_bytes, m3_native_len)
-PAYLOAD_COMMON = secrets.token_bytes(common_len)
+m3_precondition = m3_persistence_precondition(args.m3_k)
+if m3_precondition is None:
+    common_len = min(args.payload_bytes, m3_native_len)
+    PAYLOAD_COMMON = secrets.token_bytes(common_len)
+else:
+    # No positive payload fits in one publication.  Do not invent a 1-byte
+    # stand-in: a fresh receiver would only ever see the last segment.
+    common_len = 0
+    PAYLOAD_COMMON = b""
 native_m12 = secrets.token_bytes(args.payload_bytes)
 PAYLOAD_NATIVE: dict[str, bytes] = {
     "M1": native_m12,
     "M2": native_m12,  # same bytes: the write is paired across methods too
-    "M3": PAYLOAD_COMMON if m3_native_len == common_len
-    else secrets.token_bytes(m3_native_len),
 }
+if m3_precondition is None:
+    PAYLOAD_NATIVE["M3"] = (
+        PAYLOAD_COMMON if m3_native_len == common_len
+        else secrets.token_bytes(m3_native_len)
+    )
 PAYLOAD_REGISTRY = {
-    "common": payload_info(PAYLOAD_COMMON),
+    "common": (
+        payload_info(PAYLOAD_COMMON)
+        if common_len >= 1
+        else {
+            "bytes": 0,
+            "status": "protocol_precondition_unmet",
+            "summary": m3_precondition["summary"] if m3_precondition else "",
+        }
+    ),
     "native": {m: payload_info(b) for m, b in PAYLOAD_NATIVE.items()},
+    "m3_single_publication_payload_bytes": m3_native_len,
 }
 
 # -----------------------------------------------------------------------------
@@ -303,15 +370,20 @@ NATIVE_CONDITION = {"name": "native-size", "kwargs": {}, "payload": "native"}
 # job assembly: one INDEPENDENT instance per (method, condition, Δ, repeat)
 jobs: list[tuple[str, dict, float, int]] = []
 for method in args.methods:
-    for cond in COMMON_CONDITIONS:
-        for d in args.delays:
-            for r in range(args.repeats):
-                jobs.append((method, cond, d, r))
-    if method == "M3":
-        for cond in M3_CONDITIONS:
+    if method == "M3" and m3_precondition is not None:
+        # Single-publication recovery is impossible at this K.  Skip every
+        # M3 condition, including native-size, instead of recording a loss.
+        continue
+    if common_len >= 1:
+        for cond in COMMON_CONDITIONS:
             for d in args.delays:
                 for r in range(args.repeats):
                     jobs.append((method, cond, d, r))
+        if method == "M3":
+            for cond in M3_CONDITIONS:
+                for d in args.delays:
+                    for r in range(args.repeats):
+                        jobs.append((method, cond, d, r))
     for d in args.delays:
         for r in range(args.repeats):
             jobs.append((method, NATIVE_CONDITION, d, r))
@@ -538,6 +610,13 @@ for method in results:
             "summary": summarize_curve(pts),
         }
         print(f"{method} / {cond_name}: {results[method][cond_name]['summary']['summary']}")
+
+if m3_precondition is not None and "M3" in results:
+    results["M3"]["protocol-precondition"] = {
+        "points": [],
+        "summary": m3_precondition,
+    }
+    print(f"M3 / protocol-precondition: {m3_precondition['summary']}")
 
 out = workspace / "reports" / "exp_c.json"
 out.parent.mkdir(parents=True, exist_ok=True)

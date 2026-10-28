@@ -164,5 +164,50 @@ class ExpCM3ExpiryAndEvictionIntegrationTest(unittest.TestCase):
                 self.assertEqual(p["recovered_fraction"], 0.0)
 
 
+class ExpCInfeasibleSinglePublicationTest(unittest.TestCase):
+    """K=32 cannot hold a 1-byte payload in one publication.
+
+    The report must say the protocol premise is unmet.  It must not run
+    the point and call the inevitable loss a Persistence failure.
+    """
+
+    def test_k32_is_precondition_not_persistence_failure(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            ws = Path(td) / "ws"
+            proc = subprocess.run(
+                [
+                    sys.executable, "-m", "tasks.exp_c",
+                    "--workspace", str(ws),
+                    "--methods", "M3",
+                    "--m3-k", "32",
+                    "--delays", "0",
+                    "--repeats", "1",
+                ],
+                cwd=REPO_ROOT, capture_output=True, text=True, timeout=120,
+            )
+            self.assertEqual(
+                proc.returncode, 0,
+                f"stdout:\n{proc.stdout[-2000:]}\nstderr:\n{proc.stderr[-2000:]}",
+            )
+            self.assertIn("协议前提不满足", proc.stdout)
+            report = json.loads((ws / "reports" / "exp_c.json").read_text())
+            common = report["payloads"]["common"]
+            self.assertEqual(common["status"], "protocol_precondition_unmet")
+            self.assertEqual(common["bytes"], 0)
+            self.assertEqual(
+                report["payloads"]["m3_single_publication_payload_bytes"], 0
+            )
+            self.assertNotIn("M3", report["payloads"]["native"])
+            block = report["results"]["M3"]["protocol-precondition"]
+            summary = block["summary"]
+            self.assertIn("协议前提不满足", summary["summary"])
+            self.assertFalse(summary["precondition_met"])
+            self.assertFalse(summary["counted_as_persistence_failure"])
+            self.assertIsNone(summary["logically_recovered"])
+            self.assertEqual(summary["minimum_k_for_one_byte_payload"], 58)
+            self.assertEqual(block["points"], [])
+            self.assertEqual(list(report["results"]["M3"]), ["protocol-precondition"])
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -14,10 +14,10 @@ Key set: K keys per sender (`s{sender}_k{index:04d}`), fixed for the run.
 Per-publication reserved header keys (18 of them, per sender):
     k00..k07  msg_id, 8 bits              (the reduced header carries only
                                           8 bits: ids >= 256 are REJECTED
-                                          at send time and the sender
-                                          counter wraps at 256 with an
-                                          explicit recorded event, they
-                                          are never silently aliased)
+                                          at send time.  After 256 messages
+                                          the sender refuses further sends
+                                          rather than wrapping, so ids are
+                                          never aliased onto an old message)
     k08..k13  chunk_id, 6 bits            (ids >= 64 rejected: max message
                                           = 64 chunks x 64 B = 4096 B)
     k14       frame_published (final segment of final chunk only)
@@ -102,8 +102,9 @@ class M3CacheStateChannel(ChannelAdapter):
     method = "M3"
 
     # The reduced physical header addresses only msg_id < 256 (8 bits).
-    # Frames outside the addressable range are REJECTED (_validate_frames);
-    # the sender counter wraps at this limit with an explicit recorded event.
+    # Frames outside the addressable range are REJECTED (_validate_frames).
+    # Once 256 messages have been sent, further sends are refused; the
+    # counter does not wrap, so chunk records and delivery identity stay put.
     MSG_ID_LIMIT = 0x100
 
     def __init__(self, *args, **kwargs) -> None:
@@ -173,7 +174,7 @@ class M3CacheStateChannel(ChannelAdapter):
         be silently ALIASED onto an old message by the bit masks, so it is
         rejected outright (ValueError -> tool error to the agent).  Max
         addressable message: 64 chunks x 64 B = 4096 B; max 256 messages per
-        sender before the (recorded) counter wrap."""
+        sender, after which further sends are refused (no id reuse)."""
         for fr in frames:
             if fr.msg_id > 0xFF or fr.chunk_id > 0x3F or fr.total_chunks > 0xFF:
                 raise ValueError(
@@ -249,13 +250,12 @@ class M3CacheStateChannel(ChannelAdapter):
         header_bits.append(toggle)  # k16
         header_bits.append(1)  # k17 activity marker (set forever)
         changes: list[dict[str, Any]] = []  # §10 audit trail (per key op)
-        probes = 0  # publish-side existence queries are real storage ops
         # payload keys: segment bit j lands on allowed key idx[j]
         for j, k in enumerate(idx):
             want = 1 if j < len(seg) and seg[j] else 0
             key = self._key(sender, k)
-            present = key in cache  # existence probe ONLY (§12)
-            probes += 1
+            with self._timed_op("cache_probe_publish", count=1):
+                present = key in cache  # existence probe ONLY (§12)
             if want and not present:
                 with self._timed_op("cache_set", count=1):
                     cache.set(key, b"1", expire=self.ttl)
@@ -267,8 +267,8 @@ class M3CacheStateChannel(ChannelAdapter):
         # reserved keys are protocol-owned and always writable
         for i, bit in enumerate(header_bits):
             key = self._key(sender, i)
-            present = key in cache
-            probes += 1
+            with self._timed_op("cache_probe_publish", count=1):
+                present = key in cache
             if bit and not present:
                 with self._timed_op("cache_set", count=1):
                     cache.set(key, b"h", expire=self.ttl)
@@ -277,10 +277,6 @@ class M3CacheStateChannel(ChannelAdapter):
                 with self._timed_op("cache_delete", count=1):
                     cache.delete(key)
                 changes.append({"key": key, "action": "delete"})
-        if probes:
-            # every publish-side existence query is counted (§8.7), not only
-            # the ones that changed state
-            self._op("cache_probe_publish", count=probes)
         # §10 audit: actual cache-key state operations (M3's carrier); the
         # content view gets the op summary only, keys go to the extended view
         self._audit(

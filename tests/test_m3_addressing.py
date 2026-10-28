@@ -2,8 +2,9 @@
 
 - logical ids are never silently truncated into the physical encoding:
   out-of-range frames are REJECTED before anything is staged
-- the sender's msg-id space wraps at the carrier's addressable limit with
-  an EXPLICIT recorded event (never silent aliasing)
+- once the sender's addressable msg-id space is full, further sends are
+  refused.  Existing chunk records and send-side truth are kept; ids are
+  not wrapped and not overwritten
 - carriers with full 16-bit logical fields (M1) are unaffected
 """
 
@@ -47,28 +48,35 @@ class M3AddressingTest(unittest.TestCase):
             adapter.send_payload(0, b"x" * (64 * 64), view=views[0])
             self.assertEqual(len(mlog.chunks), 64)
 
-    def test_msg_id_wraps_at_256_with_explicit_event(self) -> None:
-        # 256 sends use ids 0..255; the 257th reuses id 0 and the wrap is
-        # RECORDED -- never a silent aliasing onto id 256
+    def test_msg_id_exhausted_refuses_without_overwrite(self) -> None:
+        # 256 sends use ids 0..255.  The 257th is refused: record count
+        # stays 256, and msg_id 0 keeps the first payload.
         with tempfile.TemporaryDirectory() as td:
             adapter, mlog, views = _m3(td)
-            for _ in range(256):
-                adapter.send_payload(0, b"x", view=views[0])
+            first = adapter.send_payload(0, b"A", view=views[0])
+            self.assertEqual(first["status"], "staged")
+            self.assertEqual(first["msg_id"], 0)
+            self.assertEqual(adapter._truth[(0, 0, 0)], b"A")
+            for _ in range(255):
+                adapter.send_payload(0, b"B", view=views[0])
             ids = {rec.msg_id for rec in mlog.chunks.values()}
-            self.assertEqual(min(ids), 0)
-            self.assertEqual(max(ids), 255)  # nothing above the 8-bit width
-            wraps = [
-                e for e in mlog.events if e.get("event") == "carrier_msg_id_wrap"
+            self.assertEqual(ids, set(range(256)))
+            self.assertEqual(len(mlog.chunks), 256)
+            refused = adapter.send_payload(0, b"C", view=views[0])
+            self.assertEqual(refused["status"], "msg_id_exhausted")
+            self.assertIn("error", refused)
+            self.assertEqual(len(mlog.chunks), 256)
+            self.assertEqual(adapter._truth[(0, 0, 0)], b"A")
+            self.assertEqual(adapter._next_msg_id[0], 256)
+            exhausted = [
+                e for e in mlog.events
+                if e.get("event") == "carrier_msg_id_exhausted"
             ]
-            self.assertEqual(len(wraps), 1)
-            self.assertEqual(wraps[0]["limit"], 0x100)
-            # after the wrap the sender reuses id 0: the (0,0) chunk record
-            # is OVERWRITTEN (documented aliasing of the finite id space;
-            # the fire-and-forget protocol accepts it, but never silently)
-            before = len(mlog.chunks)
-            adapter.send_payload(0, b"x", view=views[0])
-            self.assertEqual(len(mlog.chunks), before)  # id 0 reused, not new
-            self.assertIn(adapter._chunk_key(0, 0, 0), mlog.chunks)
+            self.assertEqual(len(exhausted), 1)
+            self.assertEqual(exhausted[0]["limit"], 0x100)
+            self.assertFalse(any(
+                e.get("event") == "carrier_msg_id_wrap" for e in mlog.events
+            ))
 
     def test_m1_full_16bit_fields_unaffected(self) -> None:
         # M1's physical encoding carries the full logical fields: a 65-chunk

@@ -50,10 +50,13 @@ class M1FileContentChannel(ChannelAdapter):
             with open(path, "wb") as f:
                 f.write(body)
         # §10 audit: W sees the ACTUAL visible file body (M1's carrier is
-        # the file content), not the unified tool-call plaintext
+        # the file content), not the unified tool-call plaintext.
+        # resource_id is the stable object identity: same basename under
+        # two senders is two objects.
         self._audit(
-            "file_write", sender, file=name, body_len=len(body),
+            "file_write", sender, body_len=len(body),
             body_repr=repr(body[:256]),
+            **self._resource(sender, name),
         )
         return True
 
@@ -75,7 +78,9 @@ class M1FileContentChannel(ChannelAdapter):
                 self._live_bytes[sender] += size
                 slot = int(path.stem[1:])
                 self._max_live_slot[sender] = max(self._max_live_slot[sender], slot)
-                self._audit("promote_move", sender, file=path.name)
+                self._audit(
+                    "promote_move", sender, **self._resource(sender, path.name)
+                )
         shutil.rmtree(stage_dir, ignore_errors=True)
         self.update_peak_occupancy()
 
@@ -100,12 +105,26 @@ class M1FileContentChannel(ChannelAdapter):
             # §10 audit: which file of whose namespace was read (access
             # association for the extended view)
             self._audit(
-                "file_read", receiver, file=path.name, namespace=f"sender{sender}"
+                "file_read", receiver, **self._resource(sender, path.name)
             )
             wf = F.WireFrame.parse(body)
             if wf is not None:
                 out.append(wf)
         return out
+
+    def _resource(self, owner: int, file_name: str) -> dict[str, str]:
+        """Stable identity of one M1 object.
+
+        Slot names restart at f000000.bin for every sender, so the basename
+        alone does not identify the object.  Writes and reads of the same
+        object share `resource_id`; the reader is the audit event's agent.
+        """
+        namespace = f"sender{owner}"
+        return {
+            "file": file_name,
+            "namespace": namespace,
+            "resource_id": f"{self.mlog.case_run_id}|{namespace}|{file_name}",
+        }
 
     def _occupancy(self) -> tuple[int, int]:
         n = sum(s + 1 for s in self._max_live_slot.values())

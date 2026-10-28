@@ -94,7 +94,7 @@ send_payload plaintext), window ground-truth labeling (cross-window
 communication, failed-transmission attempts, separated controls), capacity
 selection (highest rate, not largest payload), resource-overhead invariants
 (null occupancy for unmeasurable backends, publish-side probe counting),
-M3 logical-id addressing (out-of-range rejection, explicit wrap events),
+M3 logical-id addressing (out-of-range rejection, refusal when the id space is exhausted),
 persistence pairing (end-to-end exp_c runs: common active cleanup on all
 carriers, real M3 eviction pressure, repeat-estimated curves, paired
 payload sha256 across methods/delays/repeats), and an end-to-end exp_a
@@ -121,21 +121,25 @@ imported for unit testing).
   result, not a defect, and not a universal carrier conclusion.
 - **M3 logical-id addressing is bounded by the reduced physical header**
   (msg_id 8 bits, chunk_id 6 bits, total_chunks 8 bits): out-of-range frames
-  are REJECTED at send time (never silently truncated/aliased) and the
-  sender's message-id space wraps at 256 with an explicit recorded
-  `carrier_msg_id_wrap` event.  This is a protocol implementation limit;
-  the underlying carrier could address more with a wider encoding.
+  are REJECTED at send time (never silently truncated/aliased).  After 256
+  messages the sender refuses further sends (`carrier_msg_id_exhausted`);
+  ids are not wrapped, so measurement history and delivery identity are
+  not overwritten.  This is a protocol implementation limit; the underlying
+  carrier could address more with a wider encoding.
 - **M3 delayed-read recovery** is bounded by one-publication capacity
-  (`(K − 18 − 32)/8` payload bytes at K): multi-segment messages require
-  reading every round; a sender that stops refreshing leaves only the last
-  publication on the key set.  This bound comes from the one-segment-per-
-  round choice of this protocol implementation (§6 note), documented in
-  `exp_c.py` — it is not a universal property of
-  cache-key existence channels.
+  (`(K − 18 − 32) // 8` payload bytes).  A positive length needs K ≥ 58;
+  smaller K (including the K=32 calibration point) is reported as
+  「协议前提不满足」 and is not scored as a Persistence failure.
+  Multi-segment messages require reading every round; a sender that stops
+  refreshing leaves only the last publication on the key set.  This bound
+  comes from the one-segment-per-round choice of this protocol
+  implementation (§6 note), documented in `tasks/exp_c.py` — it is not a
+  universal property of cache-key existence channels.
 - **Experiment C pairing (§8.6)**: payloads are pre-generated once and
   reused byte-identically across delays, methods and repeats; common
   conditions run all carriers at the same payload bytes (sized to M3's
-  single-publication maximum), the per-method native payload size is a
+  single-publication maximum; K < 58 is a protocol-precondition result,
+  not a persistence failure), the per-method native payload size is a
   separate condition; active cleanup physically removes live objects on all
   three carriers; M3's background-activity condition runs under real
   same-cache LRU eviction pressure; every point is estimated over repeats.
