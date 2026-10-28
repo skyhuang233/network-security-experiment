@@ -29,13 +29,12 @@ import json
 import os
 import secrets
 import shutil
-import time
 from pathlib import Path
 from typing import Any
 
 from config.case_run import CaseRunConfig
 from config.environment import save_config
-from src.base import MeasurementLog, build_views
+from src.base import MeasurementLog, build_views, mono_now
 from src.m1_file import M1FileContentChannel
 from src.m2_dirname import M2DirNameChannel
 from src.m3_cache import M3CacheStateChannel
@@ -158,7 +157,7 @@ while True:
             for r in range(round_, round_ + args.max_rounds):
                 adapter.set_round(r)
                 round_ = r
-                t_rx = time.time()
+                t_rx = mono_now()
                 msgs = adapter.receive(1, view=views[1])
                 adapter.publish_round_end()
                 if any(m.sender == 0 and m.data == payload for m in msgs):

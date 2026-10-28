@@ -41,9 +41,19 @@ from config.case_run import CaseRunConfig
 from . import frame as F
 
 
-def now() -> float:
-    """Wall-clock seconds (float, monotonic-safe for durations)."""
+def wall_now() -> float:
+    """Wall-clock seconds for log correlation. Do not subtract these."""
     return time.time()
+
+
+def mono_now() -> float:
+    """Monotonic seconds for every duration (latency, throughput window)."""
+    return time.monotonic()
+
+
+def now() -> float:
+    """Duration clock. Alias of `mono_now` for existing callers."""
+    return mono_now()
 
 
 @dataclass
@@ -62,10 +72,15 @@ class ChunkRecord:
     frame_published: bool
     payload_len: int  # ground-truth payload length in bytes
 
-    # send side
-    send_time: float | None = None  # first storage publish op for this chunk
+    # send side.  send_time is the monotonic instant before this chunk's
+    # first send operation (before chunking for the first chunk of a
+    # message, before that chunk's staging otherwise).  The same instant
+    # is used for every carrier.  publish_time is when the chunk first
+    # became physically visible; it is diagnostic and is not a metric.
+    send_time: float | None = None
     send_round: int | None = None
     publish_round: int | None = None  # round at which it became visible
+    publish_time: float | None = None
 
     # receive side: per receiver first correct delivery (§7 delivery def)
     delivered: dict[int, bool] = field(default_factory=dict)  # receiver -> bool
@@ -187,19 +202,24 @@ class MeasurementLog:
     def record_attempt(
         self, rec: ChunkRecord, attempt: dict[str, Any]
     ) -> None:
+        """Keep a decode candidate for BER.  Does not mark delivery.
+
+        A chunk is application-layer delivered only after `receive` has
+        reassembled the whole message and returned it.  An exact payload
+        match on one chunk, or a CRC pass, is not that event.
+        """
         with self._lock:
             rec.attempts.append(attempt)
-            rx = attempt.get("receiver")
-            # §7 "first correct delivery" requires the decoded candidate to
-            # EQUAL the send-side ground truth (exact match).  CRC-16 is a
-            # protocol integrity check only: equal-length CRC collisions
-            # exist (verified: 00 10 21 vs 01 00 00 share CRC 0xfbac), so
-            # crc_ok alone must never mark a chunk delivered.
-            if attempt.get("exact_match") and rx is not None:
-                if rx not in rec.delivered:  # first correct delivery
-                    rec.delivered[rx] = True
-                    rec.deliver_time[rx] = float(attempt.get("time", now()))
-                    rec.deliver_round[rx] = int(attempt.get("round", 0))
+
+    def mark_delivered(
+        self, rec: ChunkRecord, receiver: int, t: float, round_: int
+    ) -> None:
+        """First correct delivery of this chunk to `receiver` (§7)."""
+        with self._lock:
+            if receiver not in rec.delivered:
+                rec.delivered[receiver] = True
+                rec.deliver_time[receiver] = t
+                rec.deliver_round[receiver] = round_
 
     # -- overhead / events ----------------------------------------------------
 
@@ -220,7 +240,7 @@ class MeasurementLog:
 
     def record_event(self, event: dict[str, Any]) -> None:
         with self._lock:
-            event = {"time": now(), **event}
+            event = {"time": wall_now(), **event}
             self.events.append(event)
 
     # -- occupancy ------------------------------------------------------------
@@ -272,6 +292,7 @@ class MeasurementLog:
                         "send_time": v.send_time,
                         "send_round": v.send_round,
                         "publish_round": v.publish_round,
+                        "publish_time": v.publish_time,
                         "delivered": v.delivered,
                         "deliver_time": v.deliver_time,
                         "deliver_round": v.deliver_round,
@@ -461,7 +482,13 @@ class ChannelAdapter(ABC):
     ) -> dict[str, Any]:
         """Split, frame, and STAGE a payload.  Fire-and-forget (no ack).
 
-        t_send (§8.3) is the first staging storage op for the chunk.
+        t_send (§8.3) is the monotonic instant before this chunk's first
+        send operation, for every carrier: before chunking on the first
+        chunk, before that chunk's staging on the rest.  It is not the
+        physical publish time (M1/M2 I/O and M3's later cache update are
+        both inside the latency interval).  publish_time records visibility
+        separately and is not a metric.
+
         A call that never enters the backend — id space exhausted, or every
         frame rejected by policy — does not allocate a message id and does
         not register measurement records.
@@ -492,16 +519,21 @@ class ChannelAdapter(ABC):
                 "status": "msg_id_exhausted",
             }
 
+        # One clock for every carrier, before chunking and before any
+        # carrier-specific send I/O.  Later chunks stamp their own start
+        # immediately before their staging call.
+        t_send_call = mono_now()
         frames, nxt = F.chunk_bytes(data, msg_id)
         # Carrier-addressing check BEFORE anything is staged (no partial
         # staging, no silent truncation): a carrier whose physical encoding
         # cannot address a frame's logical fields must reject it outright.
         self._validate_frames(frames)
 
-        staged: list[F.Frame] = []
-        for fr in frames:
+        staged: list[tuple[F.Frame, float]] = []
+        for i, fr in enumerate(frames):
+            t_chunk = t_send_call if i == 0 else mono_now()
             if self._stage_frame(sender, fr):
-                staged.append(fr)
+                staged.append((fr, t_chunk))
         if not staged:
             # Every frame was rejected before a backend write.  That is not
             # a transmission attempt: nothing the other agent can read was
@@ -513,7 +545,7 @@ class ChannelAdapter(ABC):
                 "payload_bytes": len(data),
             }
 
-        for fr in staged:
+        for fr, t_chunk in staged:
             rec = self.mlog.register_send(
                 sender=sender,
                 msg_id=fr.msg_id,
@@ -523,7 +555,7 @@ class ChannelAdapter(ABC):
                 payload_len=len(fr.payload),
             )
             rec.send_round = self.current_round
-            rec.send_time = now()
+            rec.send_time = t_chunk
             self._truth[(sender, fr.msg_id, fr.chunk_id)] = fr.payload
             self._staged[sender].append(fr)
         self._next_msg_id[sender] = nxt
@@ -561,10 +593,12 @@ class ChannelAdapter(ABC):
             self._promote(sender)
             if self._staged[sender]:
                 pr = self.current_round
+                t_pub = mono_now()
                 for fr in self._staged[sender]:
                     rec = self.mlog.chunks.get(self._chunk_key(sender, fr.msg_id, fr.chunk_id))
                     if rec is not None and rec.publish_round is None:
                         rec.publish_round = pr
+                        rec.publish_time = t_pub
                 self._staged[sender] = []
         self._post_promote()
 
@@ -584,8 +618,10 @@ class ChannelAdapter(ABC):
         - Only physical objects not yet consumed by this receiver are read
           (re-reading the same object is not a new delivery attempt).
         - Decode candidates are recorded BEFORE integrity checks drop them
-          (§8.4).
-        - First correct per-chunk delivery is recorded here (§7).
+          (§8.4).  Recording a candidate does not mark the chunk delivered.
+        - A chunk is delivered only after its whole message passes CRC,
+          reassembles, and is returned to this receiver, and only when that
+          chunk's payload equals the send-side truth (§7).
         """
         self.mlog.record_tool_call("receive")
         messages: list[ReceivedMessage] = []
@@ -613,9 +649,37 @@ class ChannelAdapter(ABC):
                         messages.append(
                             ReceivedMessage(sender=sender, msg_id=msg_id, data=data)
                         )
+                        self._commit_delivery(receiver, sender, ok)
                 if data is not None or stalled:
                     del inbox[msg_id]
         return messages
+
+    def _commit_delivery(
+        self,
+        receiver: int,
+        sender: int,
+        frames: list[F.WireFrame],
+    ) -> None:
+        """Mark chunks of a message that was just returned to the agent.
+
+        `frames` are the CRC-ok frames reassembly accepted.  A chunk whose
+        payload does not equal the send-side truth is not delivered, even
+        though the agent was handed the (wrong) bytes.  Chunks that never
+        joined this returned message — missing, or dropped for a bad CRC —
+        stay undelivered.  Their attempts remain for BER.
+        """
+        t = mono_now()
+        rnd = self.current_round
+        for wf in frames:
+            rec = self.mlog.chunks.get(
+                self._chunk_key(sender, wf.msg_id, wf.chunk_id)
+            )
+            if rec is None:
+                continue
+            truth = self._truth.get((sender, wf.msg_id, wf.chunk_id))
+            if truth is None or wf.payload != truth:
+                continue
+            self.mlog.mark_delivered(rec, receiver, t, rnd)
 
     def _readable_senders(
         self, receiver: int, view: ChannelView | None
@@ -629,9 +693,10 @@ class ChannelAdapter(ABC):
         if rec is None:
             return  # unalignable to any sent chunk; flows into loss counts
         truth = self._truth.get((sender, wf.msg_id, wf.chunk_id))
-        # §7/§8.4: "correct delivery" and BER comparability are defined
-        # against the send-side ground truth:
-        #   exact_match  candidate == truth (required for delivery)
+        # BER comparability is defined against the send-side ground truth.
+        # exact_match is necessary for delivery but not sufficient: delivery
+        # is committed only when receive() returns the whole message.
+        #   exact_match  candidate == truth
         #   comparable   lengths align (required for a meaningful BER; a
         #                length-mismatched candidate is unalignable and
         #                must never be assigned a zero BER)

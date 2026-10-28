@@ -518,6 +518,7 @@ while True:
         r.send_round = rec.send_round
         r.send_time = rec.send_time
         r.publish_round = rec.publish_round
+        r.publish_time = rec.publish_time
     rx_adapter.set_round(2)
     msgs = rx_adapter.receive(1, view=rx_views[1])
     recovered = any(m.sender == 0 and m.data == payload for m in msgs)

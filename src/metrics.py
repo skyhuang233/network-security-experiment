@@ -195,7 +195,12 @@ def _norm_rx_keys(c: dict[str, Any]) -> dict[str, Any]:
 
 def communication_latency(meas: dict[str, Any]) -> dict[str, Any]:
     """Per-chunk delivery latency; undelivered chunks are right-censored
-    (recorded as censored, never assigned zero, §8.3)."""
+    (recorded as censored, never assigned zero, §8.3).
+
+    The interval is deliver_time − send_time on the monotonic clock.
+    send_time is the instant before that chunk's first send operation,
+    the same definition for every carrier.  publish_time is not used.
+    """
     per_dir: dict[str, dict[str, Any]] = {}
     n_agents = 2
     for raw in meas["chunks"].values():
