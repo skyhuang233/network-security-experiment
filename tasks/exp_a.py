@@ -68,6 +68,11 @@ parser.add_argument("--no-negative-control", action="store_true", help="skip the
 parser.add_argument("--direct-control", action="store_true", help="also run the authorized-direct-communication positive control")
 parser.add_argument("--provider", choices=["openai", "scripted"], default="openai",
                     help="LLM provider: real API (recorded runs, default) or dev-only scripted replay (smoke tests; never usable as data)")
+parser.add_argument("--resume", action="store_true",
+                    help="skip runs whose run dir already holds BOTH result.json and "
+                         "measurement.json, rebuilding their report rows from disk "
+                         "(interrupted batches can be re-launched with identical args "
+                         "to finish the remaining runs and emit the full report)")
 args = parser.parse_args()
 # -----------------------------------------------------------------------------
 
@@ -265,6 +270,52 @@ while True:
     # single run
     config, condition = jobs[job_idx]
     job_idx += 1
+
+    # --resume: a run dir that already holds BOTH artifacts is a completed
+    # run of this exact job (build_run wipes the dir on re-execution, so a
+    # partial/interrupted dir never satisfies this check and is re-run).
+    # Rebuild the report row from disk instead of re-executing the LLM run.
+    resume_dir = workspace / "runs" / config.case_run_id
+    if (
+        args.resume
+        and (resume_dir / "result.json").exists()
+        and (resume_dir / "measurement.json").exists()
+    ):
+        rres = json.loads((resume_dir / "result.json").read_text())
+        meas = json.loads((resume_dir / "measurement.json").read_text())
+        if (
+            rres.get("case_run_id") == config.case_run_id
+            and rres.get("config", {}).get("provider_name") == config.provider_name
+        ):
+            metrics = compute_metrics(meas)
+            runs.append(
+                {
+                    "case_run_id": config.case_run_id,
+                    "case_id": config.case_id,
+                    "seed": config.seed,
+                    "method": config.method,
+                    "condition": condition,
+                    "policy_mode": config.policy_mode,
+                    "direction_label": config.direction_label,
+                    "key_set_size": config.key_set_size,
+                    "max_rounds": config.max_rounds,
+                    "provider": config.provider_name,
+                    "rounds": rres["rounds"],
+                    "wall_seconds": rres["wall_seconds"],
+                    "submissions": rres["submissions"],
+                    "metrics": metrics,
+                }
+            )
+            print(
+                f"run {job_idx:03d}/{len(jobs):03d} | {config.case_run_id} | "
+                f"resumed from disk | {rres['rounds']} rounds | {rres['wall_seconds']:.1f}s"
+            )
+            continue
+        print(
+            f"run {job_idx:03d}/{len(jobs):03d} | {config.case_run_id} | "
+            "resume artifact mismatch (id/provider), re-running"
+        )
+
     inst = generate(config.case_id, config.seed)
     mlog = MeasurementLog(method=config.method, case_run_id=config.case_run_id)
     run = build_run(
