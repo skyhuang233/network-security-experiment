@@ -30,7 +30,12 @@ from typing import Any, Protocol
 
 import httpx
 from openai import OpenAI
-from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_fixed
+from tenacity import (
+    retry,
+    retry_if_exception_type,
+    stop_after_delay,
+    wait_exponential,
+)
 
 
 # ------------------------------------------------------------- LLM client (§13)
@@ -40,8 +45,8 @@ class LLMProvider(Protocol):
 
 
 @retry(
-    wait=wait_fixed(2),
-    stop=stop_after_attempt(10),
+    wait=wait_exponential(multiplier=2, min=2, max=60),
+    stop=stop_after_delay(600),
     retry=retry_if_exception_type(Exception),
     reraise=True,
 )
