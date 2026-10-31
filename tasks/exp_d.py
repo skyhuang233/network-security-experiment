@@ -59,9 +59,19 @@ parser = argparse.ArgumentParser(description="Experiment D: monitoring and isola
 sub = parser.add_subparsers(dest="mode", required=True)
 
 p_audit = sub.add_parser("audit", help="W audit over finished run dirs")
-p_audit.add_argument("run_dirs", nargs="+", help="persisted run directories (measurement.json inside)")
-p_audit.add_argument("--views", nargs="+", default=["content", "extended"], help="audit views to render")
+# callers must put the positional run dirs BEFORE --views: an nargs="+"
+# optional consumes every following positional token, so run dirs placed
+# after --views are swallowed into the view list
+p_audit.add_argument("--views", nargs="+", default=["content", "extended"], help="audit views to render (list the run dirs before this flag)")
 p_audit.add_argument("--workspace", type=str, default="outputs", help="workspace root (reports)")
+p_audit.add_argument("--resume", action="store_true",
+                     help="reuse per-run audit results already on disk "
+                          "(<workspace>/audit/<view>/<run>.json) instead of "
+                          "re-judging them; an interrupted audit can be "
+                          "relaunched with identical args to finish")
+# positional LAST: a nargs="+" positional declared before the optionals
+# consumes every token (including option flags) and the options never parse
+p_audit.add_argument("run_dirs", nargs="+", help="persisted run directories (measurement.json inside)")
 
 p_iso = sub.add_parser("isolation", help="isolation controls comparison")
 p_iso.add_argument("--case", required=True, help="task case id, e.g. I-01")
@@ -77,6 +87,11 @@ args = parser.parse_args()
 
 
 # ------------------------------------------------------------------ part 1
+
+
+def audit_result_path(workspace: Path, view: str, run_dir: Path) -> Path:
+    """Where one (view, run) audit result is persisted for --resume."""
+    return workspace / "audit" / view / f"{run_dir.name}.json"
 
 
 def audit_run(
@@ -158,7 +173,30 @@ if args.mode == "audit":
         # single audit job: all windows of one run under one view
         view, d = audit_jobs[job_idx]
         job_idx += 1
-        r = audit_run(d, view, w)
+        # --resume: a persisted (view, run) result is exactly the LLM
+        # judgments already paid for.  Labels are recomputed cheaply from
+        # the measurement log so a resumed result is cross-checked against
+        # the run it claims to cover before being trusted.
+        saved = audit_result_path(workspace, view, d)
+        r = None
+        if args.resume and saved.exists():
+            cand = json.loads(saved.read_text())
+            meas = json.loads((d / "measurement.json").read_text())
+            fresh_labels = label_windows(
+                build_windows(meas.get("events", [])),
+                run_policy_mode(meas.get("events", [])),
+            )
+            if (
+                cand.get("run_id") == d.name
+                and cand.get("method") == meas.get("method")
+                and cand.get("labels") == fresh_labels
+            ):
+                r = cand
+        resumed = r is not None
+        if r is None:
+            r = audit_run(d, view, w)
+            saved.parent.mkdir(parents=True, exist_ok=True)
+            saved.write_text(json.dumps(r, indent=2, ensure_ascii=False, default=str))
         side = side_of[d.name]
         method = r["method"] or "?"
         slot = acc[view].setdefault(
@@ -170,6 +208,7 @@ if args.mode == "audit":
         print(
             f"audit {job_idx:03d}/{len(audit_jobs):03d} | {view}/{d.name} "
             f"({side}) | {len(r['judged'])} windows"
+            + (" | resumed" if resumed else "")
         )
         # -------------------------------------------------------------------------
 
