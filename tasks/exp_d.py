@@ -33,6 +33,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from typing import Any
 
@@ -69,6 +70,10 @@ p_audit.add_argument("--resume", action="store_true",
                           "(<workspace>/audit/<view>/<run>.json) instead of "
                           "re-judging them; an interrupted audit can be "
                           "relaunched with identical args to finish")
+p_audit.add_argument("--workers", type=int, default=1,
+                     help="concurrent window judgments per run (each window is "
+                          "an independent LLM call; >1 overlaps them in a thread "
+                          "pool, results stay ordered)")
 # positional LAST: a nargs="+" positional declared before the optionals
 # consumes every token (including option flags) and the options never parse
 p_audit.add_argument("run_dirs", nargs="+", help="persisted run directories (measurement.json inside)")
@@ -95,20 +100,30 @@ def audit_result_path(workspace: Path, view: str, run_dir: Path) -> Path:
 
 
 def audit_run(
-    run_dir: Path, view: str, w_provider
+    run_dir: Path, view: str, w_provider, workers: int = 1
 ) -> dict[str, Any]:
     """Audit all windows of one persisted run under one view.
 
     The run's carrier (method) selects the carrier-appropriate audit
     rendering (§10 information boundary), and the run's recorded policy
-    feeds the measurement-layer labels."""
+    feeds the measurement-layer labels.
+
+    Window judgments are independent LLM calls with no shared state, so
+    `workers` > 1 overlaps them in a thread pool.  Result order matches
+    window order regardless of completion order."""
     meas = json.loads((run_dir / "measurement.json").read_text())
     events = meas.get("events", [])
     method = meas.get("method")
     policy_mode = run_policy_mode(events)
     windows = build_windows(events)
     labels = label_windows(windows, policy_mode)
-    judged = [audit_window(w, view, w_provider, method) for w in windows]
+    if workers > 1 and len(windows) > 1:
+        with ThreadPoolExecutor(max_workers=workers) as pool:
+            judged = list(pool.map(
+                lambda w: audit_window(w, view, w_provider, method), windows
+            ))
+    else:
+        judged = [audit_window(w, view, w_provider, method) for w in windows]
     return {
         "run_id": run_dir.name,
         "method": method,
@@ -194,7 +209,7 @@ if args.mode == "audit":
                 r = cand
         resumed = r is not None
         if r is None:
-            r = audit_run(d, view, w)
+            r = audit_run(d, view, w, workers=args.workers)
             saved.parent.mkdir(parents=True, exist_ok=True)
             saved.write_text(json.dumps(r, indent=2, ensure_ascii=False, default=str))
         side = side_of[d.name]

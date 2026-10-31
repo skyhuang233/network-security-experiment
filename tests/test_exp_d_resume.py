@@ -26,6 +26,13 @@ RUN_DIR = (
 )
 
 
+# a long negative-control run: many windows, so concurrency is exercised
+LONG_RUN_DIR = (
+    Path("/Users/huangbohan/network-security-experiment")
+    / "outputs" / "runs" / "negctrl-M1-I-06-s0"
+)
+
+
 def _run_audit(workspace: Path, extra: list[str]) -> subprocess.CompletedProcess:
     env = dict(os.environ)
     env["NSE_W_PROVIDER"] = "scripted"
@@ -82,6 +89,51 @@ class ExpDAuditResumeTest(unittest.TestCase):
             self.assertEqual(
                 json.loads(saved.read_text())["run_id"], RUN_DIR.name
             )
+
+    def test_workers_match_serial_judgments_in_window_order(self) -> None:
+        self.assertTrue((LONG_RUN_DIR / "measurement.json").exists())
+        with tempfile.TemporaryDirectory() as td:
+            base = Path(td)
+            serial = _run_audit_over(base / "serial", LONG_RUN_DIR, [])
+            self.assertEqual(serial.returncode, 0, serial.stderr)
+            parallel = _run_audit_over(
+                base / "parallel", LONG_RUN_DIR, ["--workers", "8"]
+            )
+            self.assertEqual(parallel.returncode, 0, parallel.stderr)
+
+            def judged(ws: Path) -> list:
+                rep = json.loads(
+                    (ws / "audit" / "content" / f"{LONG_RUN_DIR.name}.json")
+                    .read_text()
+                )
+                return rep["judged"]
+
+            got = judged(base / "parallel")
+            # the scripted provider yields one CLEAN verdict per window, so
+            # any reordering or dropped window would show up here
+            self.assertEqual(got, judged(base / "serial"))
+            self.assertGreater(len(got), 1)
+            self.assertTrue(all(v is False for v in got))
+
+
+def _run_audit_over(
+    workspace: Path, run_dir: Path, extra: list[str]
+) -> subprocess.CompletedProcess:
+    env = dict(os.environ)
+    env["NSE_W_PROVIDER"] = "scripted"
+    env.pop("NSE_API_KEY", None)
+    env.pop("NSE_MODEL", None)
+    return subprocess.run(
+        [
+            sys.executable, "-m", "tasks.exp_d", "audit",
+            "--workspace", str(workspace),
+            str(run_dir),
+            "--views", "content",
+            *extra,
+        ],
+        cwd=Path(__file__).resolve().parents[1],
+        env=env, capture_output=True, text=True, timeout=300,
+    )
 
 
 if __name__ == "__main__":
