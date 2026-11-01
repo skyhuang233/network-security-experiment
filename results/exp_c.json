@@ -1,0 +1,3031 @@
+{
+  "payloads": {
+    "common": {
+      "bytes": 9,
+      "sha256": "e3c8dc8f7c0e4479e39ca777262f907a8c10b1afbc732033edef7f4ccfd3b771",
+      "hex": "50221c6893e49e30e2"
+    },
+    "native": {
+      "M1": {
+        "bytes": 32,
+        "sha256": "0f6b38ec9eb11f785f6e981c020aa4389ea6b5989406a1ffebce2aa241951d20",
+        "hex": "8075c5849955262824f529d99ac8033b6d184907bdfdb9680d1c231be2308c61"
+      },
+      "M2": {
+        "bytes": 32,
+        "sha256": "0f6b38ec9eb11f785f6e981c020aa4389ea6b5989406a1ffebce2aa241951d20",
+        "hex": "8075c5849955262824f529d99ac8033b6d184907bdfdb9680d1c231be2308c61"
+      },
+      "M3": {
+        "bytes": 9,
+        "sha256": "e3c8dc8f7c0e4479e39ca777262f907a8c10b1afbc732033edef7f4ccfd3b771",
+        "hex": "50221c6893e49e30e2"
+      }
+    },
+    "m3_single_publication_payload_bytes": 9
+  },
+  "results": {
+    "M1": {
+      "baseline": {
+        "points": [
+          {
+            "method": "M1",
+            "condition": "baseline",
+            "payload": "common",
+            "payload_bytes": 9,
+            "payload_sha256": "e3c8dc8f7c0e4479e39ca777262f907a8c10b1afbc732033edef7f4ccfd3b771",
+            "delay_seconds": 0,
+            "ttl_seconds": null,
+            "active_cleanup": false,
+            "expire_cleanup": false,
+            "background_activity": false,
+            "key_set_size": 128,
+            "cache_size_limit": 1073741824,
+            "repeats": 3,
+            "recovered_count": 3,
+            "receiver_metrics": [
+              {
+                "delivered_bits": 72,
+                "ber_total": 0.0,
+                "latency_seconds_median": 0.0005610422231256962
+              },
+              {
+                "delivered_bits": 72,
+                "ber_total": 0.0,
+                "latency_seconds_median": 0.0005290000699460506
+              },
+              {
+                "delivered_bits": 72,
+                "ber_total": 0.0,
+                "latency_seconds_median": 0.00046454090625047684
+              }
+            ],
+            "recovered_fraction": 1.0,
+            "logically_recovered": true
+          },
+          {
+            "method": "M1",
+            "condition": "baseline",
+            "payload": "common",
+            "payload_bytes": 9,
+            "payload_sha256": "e3c8dc8f7c0e4479e39ca777262f907a8c10b1afbc732033edef7f4ccfd3b771",
+            "delay_seconds": 1,
+            "ttl_seconds": null,
+            "active_cleanup": false,
+            "expire_cleanup": false,
+            "background_activity": false,
+            "key_set_size": 128,
+            "cache_size_limit": 1073741824,
+            "repeats": 3,
+            "recovered_count": 3,
+            "receiver_metrics": [
+              {
+                "delivered_bits": 72,
+                "ber_total": 0.0,
+                "latency_seconds_median": 1.006646249908954
+              },
+              {
+                "delivered_bits": 72,
+                "ber_total": 0.0,
+                "latency_seconds_median": 1.008037957828492
+              },
+              {
+                "delivered_bits": 72,
+                "ber_total": 0.0,
+                "latency_seconds_median": 1.0054727499373257
+              }
+            ],
+            "recovered_fraction": 1.0,
+            "logically_recovered": true
+          },
+          {
+            "method": "M1",
+            "condition": "baseline",
+            "payload": "common",
+            "payload_bytes": 9,
+            "payload_sha256": "e3c8dc8f7c0e4479e39ca777262f907a8c10b1afbc732033edef7f4ccfd3b771",
+            "delay_seconds": 10,
+            "ttl_seconds": null,
+            "active_cleanup": false,
+            "expire_cleanup": false,
+            "background_activity": false,
+            "key_set_size": 128,
+            "cache_size_limit": 1073741824,
+            "repeats": 3,
+            "recovered_count": 3,
+            "receiver_metrics": [
+              {
+                "delivered_bits": 72,
+                "ber_total": 0.0,
+                "latency_seconds_median": 10.008158375043422
+              },
+              {
+                "delivered_bits": 72,
+                "ber_total": 0.0,
+                "latency_seconds_median": 10.008109415881336
+              },
+              {
+                "delivered_bits": 72,
+                "ber_total": 0.0,
+                "latency_seconds_median": 10.008276833221316
+              }
+            ],
+            "recovered_fraction": 1.0,
+            "logically_recovered": true
+          },
+          {
+            "method": "M1",
+            "condition": "baseline",
+            "payload": "common",
+            "payload_bytes": 9,
+            "payload_sha256": "e3c8dc8f7c0e4479e39ca777262f907a8c10b1afbc732033edef7f4ccfd3b771",
+            "delay_seconds": 60,
+            "ttl_seconds": null,
+            "active_cleanup": false,
+            "expire_cleanup": false,
+            "background_activity": false,
+            "key_set_size": 128,
+            "cache_size_limit": 1073741824,
+            "repeats": 3,
+            "recovered_count": 3,
+            "receiver_metrics": [
+              {
+                "delivered_bits": 72,
+                "ber_total": 0.0,
+                "latency_seconds_median": 60.00569241726771
+              },
+              {
+                "delivered_bits": 72,
+                "ber_total": 0.0,
+                "latency_seconds_median": 60.00570879224688
+              },
+              {
+                "delivered_bits": 72,
+                "ber_total": 0.0,
+                "latency_seconds_median": 60.01385937491432
+              }
+            ],
+            "recovered_fraction": 1.0,
+            "logically_recovered": true
+          },
+          {
+            "method": "M1",
+            "condition": "baseline",
+            "payload": "common",
+            "payload_bytes": 9,
+            "payload_sha256": "e3c8dc8f7c0e4479e39ca777262f907a8c10b1afbc732033edef7f4ccfd3b771",
+            "delay_seconds": 300,
+            "ttl_seconds": null,
+            "active_cleanup": false,
+            "expire_cleanup": false,
+            "background_activity": false,
+            "key_set_size": 128,
+            "cache_size_limit": 1073741824,
+            "repeats": 3,
+            "recovered_count": 3,
+            "receiver_metrics": [
+              {
+                "delivered_bits": 72,
+                "ber_total": 0.0,
+                "latency_seconds_median": 300.01302362512797
+              },
+              {
+                "delivered_bits": 72,
+                "ber_total": 0.0,
+                "latency_seconds_median": 300.00712070800364
+              },
+              {
+                "delivered_bits": 72,
+                "ber_total": 0.0,
+                "latency_seconds_median": 300.00859033316374
+              }
+            ],
+            "recovered_fraction": 1.0,
+            "logically_recovered": true
+          }
+        ],
+        "summary": {
+          "curve": [
+            {
+              "delay_seconds": 0,
+              "recovered_count": 3,
+              "repeats": 3,
+              "recovered_fraction": 1.0
+            },
+            {
+              "delay_seconds": 1,
+              "recovered_count": 3,
+              "repeats": 3,
+              "recovered_fraction": 1.0
+            },
+            {
+              "delay_seconds": 10,
+              "recovered_count": 3,
+              "repeats": 3,
+              "recovered_fraction": 1.0
+            },
+            {
+              "delay_seconds": 60,
+              "recovered_count": 3,
+              "repeats": 3,
+              "recovered_fraction": 1.0
+            },
+            {
+              "delay_seconds": 300,
+              "recovered_count": 3,
+              "repeats": 3,
+              "recovered_fraction": 1.0
+            }
+          ],
+          "summary": "recoverable for at least the tested 300 s (all repeats of every delay point recovered)"
+        }
+      },
+      "active-cleanup": {
+        "points": [
+          {
+            "method": "M1",
+            "condition": "active-cleanup",
+            "payload": "common",
+            "payload_bytes": 9,
+            "payload_sha256": "e3c8dc8f7c0e4479e39ca777262f907a8c10b1afbc732033edef7f4ccfd3b771",
+            "delay_seconds": 0,
+            "ttl_seconds": null,
+            "active_cleanup": true,
+            "expire_cleanup": false,
+            "background_activity": false,
+            "key_set_size": 128,
+            "cache_size_limit": 1073741824,
+            "repeats": 3,
+            "recovered_count": 0,
+            "receiver_metrics": [
+              {
+                "delivered_bits": 0,
+                "ber_total": null,
+                "latency_seconds_median": null
+              },
+              {
+                "delivered_bits": 0,
+                "ber_total": null,
+                "latency_seconds_median": null
+              },
+              {
+                "delivered_bits": 0,
+                "ber_total": null,
+                "latency_seconds_median": null
+              }
+            ],
+            "recovered_fraction": 0.0,
+            "logically_recovered": false
+          },
+          {
+            "method": "M1",
+            "condition": "active-cleanup",
+            "payload": "common",
+            "payload_bytes": 9,
+            "payload_sha256": "e3c8dc8f7c0e4479e39ca777262f907a8c10b1afbc732033edef7f4ccfd3b771",
+            "delay_seconds": 1,
+            "ttl_seconds": null,
+            "active_cleanup": true,
+            "expire_cleanup": false,
+            "background_activity": false,
+            "key_set_size": 128,
+            "cache_size_limit": 1073741824,
+            "repeats": 3,
+            "recovered_count": 0,
+            "receiver_metrics": [
+              {
+                "delivered_bits": 0,
+                "ber_total": null,
+                "latency_seconds_median": null
+              },
+              {
+                "delivered_bits": 0,
+                "ber_total": null,
+                "latency_seconds_median": null
+              },
+              {
+                "delivered_bits": 0,
+                "ber_total": null,
+                "latency_seconds_median": null
+              }
+            ],
+            "recovered_fraction": 0.0,
+            "logically_recovered": false
+          },
+          {
+            "method": "M1",
+            "condition": "active-cleanup",
+            "payload": "common",
+            "payload_bytes": 9,
+            "payload_sha256": "e3c8dc8f7c0e4479e39ca777262f907a8c10b1afbc732033edef7f4ccfd3b771",
+            "delay_seconds": 10,
+            "ttl_seconds": null,
+            "active_cleanup": true,
+            "expire_cleanup": false,
+            "background_activity": false,
+            "key_set_size": 128,
+            "cache_size_limit": 1073741824,
+            "repeats": 3,
+            "recovered_count": 0,
+            "receiver_metrics": [
+              {
+                "delivered_bits": 0,
+                "ber_total": null,
+                "latency_seconds_median": null
+              },
+              {
+                "delivered_bits": 0,
+                "ber_total": null,
+                "latency_seconds_median": null
+              },
+              {
+                "delivered_bits": 0,
+                "ber_total": null,
+                "latency_seconds_median": null
+              }
+            ],
+            "recovered_fraction": 0.0,
+            "logically_recovered": false
+          },
+          {
+            "method": "M1",
+            "condition": "active-cleanup",
+            "payload": "common",
+            "payload_bytes": 9,
+            "payload_sha256": "e3c8dc8f7c0e4479e39ca777262f907a8c10b1afbc732033edef7f4ccfd3b771",
+            "delay_seconds": 60,
+            "ttl_seconds": null,
+            "active_cleanup": true,
+            "expire_cleanup": false,
+            "background_activity": false,
+            "key_set_size": 128,
+            "cache_size_limit": 1073741824,
+            "repeats": 3,
+            "recovered_count": 0,
+            "receiver_metrics": [
+              {
+                "delivered_bits": 0,
+                "ber_total": null,
+                "latency_seconds_median": null
+              },
+              {
+                "delivered_bits": 0,
+                "ber_total": null,
+                "latency_seconds_median": null
+              },
+              {
+                "delivered_bits": 0,
+                "ber_total": null,
+                "latency_seconds_median": null
+              }
+            ],
+            "recovered_fraction": 0.0,
+            "logically_recovered": false
+          },
+          {
+            "method": "M1",
+            "condition": "active-cleanup",
+            "payload": "common",
+            "payload_bytes": 9,
+            "payload_sha256": "e3c8dc8f7c0e4479e39ca777262f907a8c10b1afbc732033edef7f4ccfd3b771",
+            "delay_seconds": 300,
+            "ttl_seconds": null,
+            "active_cleanup": true,
+            "expire_cleanup": false,
+            "background_activity": false,
+            "key_set_size": 128,
+            "cache_size_limit": 1073741824,
+            "repeats": 3,
+            "recovered_count": 0,
+            "receiver_metrics": [
+              {
+                "delivered_bits": 0,
+                "ber_total": null,
+                "latency_seconds_median": null
+              },
+              {
+                "delivered_bits": 0,
+                "ber_total": null,
+                "latency_seconds_median": null
+              },
+              {
+                "delivered_bits": 0,
+                "ber_total": null,
+                "latency_seconds_median": null
+              }
+            ],
+            "recovered_fraction": 0.0,
+            "logically_recovered": false
+          }
+        ],
+        "summary": {
+          "curve": [
+            {
+              "delay_seconds": 0,
+              "recovered_count": 0,
+              "repeats": 3,
+              "recovered_fraction": 0.0
+            },
+            {
+              "delay_seconds": 1,
+              "recovered_count": 0,
+              "repeats": 3,
+              "recovered_fraction": 0.0
+            },
+            {
+              "delay_seconds": 10,
+              "recovered_count": 0,
+              "repeats": 3,
+              "recovered_fraction": 0.0
+            },
+            {
+              "delay_seconds": 60,
+              "recovered_count": 0,
+              "repeats": 3,
+              "recovered_fraction": 0.0
+            },
+            {
+              "delay_seconds": 300,
+              "recovered_count": 0,
+              "repeats": 3,
+              "recovered_fraction": 0.0
+            }
+          ],
+          "summary": "recoverability lost before 300 s under this condition"
+        }
+      },
+      "background-activity": {
+        "points": [
+          {
+            "method": "M1",
+            "condition": "background-activity",
+            "payload": "common",
+            "payload_bytes": 9,
+            "payload_sha256": "e3c8dc8f7c0e4479e39ca777262f907a8c10b1afbc732033edef7f4ccfd3b771",
+            "delay_seconds": 0,
+            "ttl_seconds": null,
+            "active_cleanup": false,
+            "expire_cleanup": false,
+            "background_activity": true,
+            "key_set_size": 128,
+            "cache_size_limit": 1073741824,
+            "repeats": 3,
+            "recovered_count": 3,
+            "receiver_metrics": [
+              {
+                "delivered_bits": 72,
+                "ber_total": 0.0,
+                "latency_seconds_median": 0.007292499765753746
+              },
+              {
+                "delivered_bits": 72,
+                "ber_total": 0.0,
+                "latency_seconds_median": 0.002346790861338377
+              },
+              {
+                "delivered_bits": 72,
+                "ber_total": 0.0,
+                "latency_seconds_median": 0.0015264591202139854
+              }
+            ],
+            "recovered_fraction": 1.0,
+            "logically_recovered": true
+          },
+          {
+            "method": "M1",
+            "condition": "background-activity",
+            "payload": "common",
+            "payload_bytes": 9,
+            "payload_sha256": "e3c8dc8f7c0e4479e39ca777262f907a8c10b1afbc732033edef7f4ccfd3b771",
+            "delay_seconds": 1,
+            "ttl_seconds": null,
+            "active_cleanup": false,
+            "expire_cleanup": false,
+            "background_activity": true,
+            "key_set_size": 128,
+            "cache_size_limit": 1073741824,
+            "repeats": 3,
+            "recovered_count": 3,
+            "receiver_metrics": [
+              {
+                "delivered_bits": 72,
+                "ber_total": 0.0,
+                "latency_seconds_median": 1.0066648330539465
+              },
+              {
+                "delivered_bits": 72,
+                "ber_total": 0.0,
+                "latency_seconds_median": 1.0046530836261809
+              },
+              {
+                "delivered_bits": 72,
+                "ber_total": 0.0,
+                "latency_seconds_median": 1.006460249889642
+              }
+            ],
+            "recovered_fraction": 1.0,
+            "logically_recovered": true
+          },
+          {
+            "method": "M1",
+            "condition": "background-activity",
+            "payload": "common",
+            "payload_bytes": 9,
+            "payload_sha256": "e3c8dc8f7c0e4479e39ca777262f907a8c10b1afbc732033edef7f4ccfd3b771",
+            "delay_seconds": 10,
+            "ttl_seconds": null,
+            "active_cleanup": false,
+            "expire_cleanup": false,
+            "background_activity": true,
+            "key_set_size": 128,
+            "cache_size_limit": 1073741824,
+            "repeats": 3,
+            "recovered_count": 3,
+            "receiver_metrics": [
+              {
+                "delivered_bits": 72,
+                "ber_total": 0.0,
+                "latency_seconds_median": 10.00873633287847
+              },
+              {
+                "delivered_bits": 72,
+                "ber_total": 0.0,
+                "latency_seconds_median": 10.003292709123343
+              },
+              {
+                "delivered_bits": 72,
+                "ber_total": 0.0,
+                "latency_seconds_median": 10.00754062505439
+              }
+            ],
+            "recovered_fraction": 1.0,
+            "logically_recovered": true
+          },
+          {
+            "method": "M1",
+            "condition": "background-activity",
+            "payload": "common",
+            "payload_bytes": 9,
+            "payload_sha256": "e3c8dc8f7c0e4479e39ca777262f907a8c10b1afbc732033edef7f4ccfd3b771",
+            "delay_seconds": 60,
+            "ttl_seconds": null,
+            "active_cleanup": false,
+            "expire_cleanup": false,
+            "background_activity": true,
+            "key_set_size": 128,
+            "cache_size_limit": 1073741824,
+            "repeats": 3,
+            "recovered_count": 3,
+            "receiver_metrics": [
+              {
+                "delivered_bits": 72,
+                "ber_total": 0.0,
+                "latency_seconds_median": 60.004034999758005
+              },
+              {
+                "delivered_bits": 72,
+                "ber_total": 0.0,
+                "latency_seconds_median": 60.00728941662237
+              },
+              {
+                "delivered_bits": 72,
+                "ber_total": 0.0,
+                "latency_seconds_median": 60.003399749752134
+              }
+            ],
+            "recovered_fraction": 1.0,
+            "logically_recovered": true
+          },
+          {
+            "method": "M1",
+            "condition": "background-activity",
+            "payload": "common",
+            "payload_bytes": 9,
+            "payload_sha256": "e3c8dc8f7c0e4479e39ca777262f907a8c10b1afbc732033edef7f4ccfd3b771",
+            "delay_seconds": 300,
+            "ttl_seconds": null,
+            "active_cleanup": false,
+            "expire_cleanup": false,
+            "background_activity": true,
+            "key_set_size": 128,
+            "cache_size_limit": 1073741824,
+            "repeats": 3,
+            "recovered_count": 3,
+            "receiver_metrics": [
+              {
+                "delivered_bits": 72,
+                "ber_total": 0.0,
+                "latency_seconds_median": 300.0082270419225
+              },
+              {
+                "delivered_bits": 72,
+                "ber_total": 0.0,
+                "latency_seconds_median": 300.00701162498444
+              },
+              {
+                "delivered_bits": 72,
+                "ber_total": 0.0,
+                "latency_seconds_median": 300.00735295796767
+              }
+            ],
+            "recovered_fraction": 1.0,
+            "logically_recovered": true
+          }
+        ],
+        "summary": {
+          "curve": [
+            {
+              "delay_seconds": 0,
+              "recovered_count": 3,
+              "repeats": 3,
+              "recovered_fraction": 1.0
+            },
+            {
+              "delay_seconds": 1,
+              "recovered_count": 3,
+              "repeats": 3,
+              "recovered_fraction": 1.0
+            },
+            {
+              "delay_seconds": 10,
+              "recovered_count": 3,
+              "repeats": 3,
+              "recovered_fraction": 1.0
+            },
+            {
+              "delay_seconds": 60,
+              "recovered_count": 3,
+              "repeats": 3,
+              "recovered_fraction": 1.0
+            },
+            {
+              "delay_seconds": 300,
+              "recovered_count": 3,
+              "repeats": 3,
+              "recovered_fraction": 1.0
+            }
+          ],
+          "summary": "recoverable for at least the tested 300 s (all repeats of every delay point recovered)"
+        }
+      },
+      "native-size": {
+        "points": [
+          {
+            "method": "M1",
+            "condition": "native-size",
+            "payload": "native",
+            "payload_bytes": 32,
+            "payload_sha256": "0f6b38ec9eb11f785f6e981c020aa4389ea6b5989406a1ffebce2aa241951d20",
+            "delay_seconds": 0,
+            "ttl_seconds": null,
+            "active_cleanup": false,
+            "expire_cleanup": false,
+            "background_activity": false,
+            "key_set_size": 128,
+            "cache_size_limit": 1073741824,
+            "repeats": 3,
+            "recovered_count": 3,
+            "receiver_metrics": [
+              {
+                "delivered_bits": 256,
+                "ber_total": 0.0,
+                "latency_seconds_median": 0.0013245418667793274
+              },
+              {
+                "delivered_bits": 256,
+                "ber_total": 0.0,
+                "latency_seconds_median": 0.0011332500725984573
+              },
+              {
+                "delivered_bits": 256,
+                "ber_total": 0.0,
+                "latency_seconds_median": 0.0009204167872667313
+              }
+            ],
+            "recovered_fraction": 1.0,
+            "logically_recovered": true
+          },
+          {
+            "method": "M1",
+            "condition": "native-size",
+            "payload": "native",
+            "payload_bytes": 32,
+            "payload_sha256": "0f6b38ec9eb11f785f6e981c020aa4389ea6b5989406a1ffebce2aa241951d20",
+            "delay_seconds": 1,
+            "ttl_seconds": null,
+            "active_cleanup": false,
+            "expire_cleanup": false,
+            "background_activity": false,
+            "key_set_size": 128,
+            "cache_size_limit": 1073741824,
+            "repeats": 3,
+            "recovered_count": 3,
+            "receiver_metrics": [
+              {
+                "delivered_bits": 256,
+                "ber_total": 0.0,
+                "latency_seconds_median": 1.0061214999295771
+              },
+              {
+                "delivered_bits": 256,
+                "ber_total": 0.0,
+                "latency_seconds_median": 1.0065829590894282
+              },
+              {
+                "delivered_bits": 256,
+                "ber_total": 0.0,
+                "latency_seconds_median": 1.0045900419354439
+              }
+            ],
+            "recovered_fraction": 1.0,
+            "logically_recovered": true
+          },
+          {
+            "method": "M1",
+            "condition": "native-size",
+            "payload": "native",
+            "payload_bytes": 32,
+            "payload_sha256": "0f6b38ec9eb11f785f6e981c020aa4389ea6b5989406a1ffebce2aa241951d20",
+            "delay_seconds": 10,
+            "ttl_seconds": null,
+            "active_cleanup": false,
+            "expire_cleanup": false,
+            "background_activity": false,
+            "key_set_size": 128,
+            "cache_size_limit": 1073741824,
+            "repeats": 3,
+            "recovered_count": 3,
+            "receiver_metrics": [
+              {
+                "delivered_bits": 256,
+                "ber_total": 0.0,
+                "latency_seconds_median": 10.007461000233889
+              },
+              {
+                "delivered_bits": 256,
+                "ber_total": 0.0,
+                "latency_seconds_median": 10.008009457960725
+              },
+              {
+                "delivered_bits": 256,
+                "ber_total": 0.0,
+                "latency_seconds_median": 10.008668374735862
+              }
+            ],
+            "recovered_fraction": 1.0,
+            "logically_recovered": true
+          },
+          {
+            "method": "M1",
+            "condition": "native-size",
+            "payload": "native",
+            "payload_bytes": 32,
+            "payload_sha256": "0f6b38ec9eb11f785f6e981c020aa4389ea6b5989406a1ffebce2aa241951d20",
+            "delay_seconds": 60,
+            "ttl_seconds": null,
+            "active_cleanup": false,
+            "expire_cleanup": false,
+            "background_activity": false,
+            "key_set_size": 128,
+            "cache_size_limit": 1073741824,
+            "repeats": 3,
+            "recovered_count": 3,
+            "receiver_metrics": [
+              {
+                "delivered_bits": 256,
+                "ber_total": 0.0,
+                "latency_seconds_median": 60.00636862497777
+              },
+              {
+                "delivered_bits": 256,
+                "ber_total": 0.0,
+                "latency_seconds_median": 60.00979791721329
+              },
+              {
+                "delivered_bits": 256,
+                "ber_total": 0.0,
+                "latency_seconds_median": 60.01184799987823
+              }
+            ],
+            "recovered_fraction": 1.0,
+            "logically_recovered": true
+          },
+          {
+            "method": "M1",
+            "condition": "native-size",
+            "payload": "native",
+            "payload_bytes": 32,
+            "payload_sha256": "0f6b38ec9eb11f785f6e981c020aa4389ea6b5989406a1ffebce2aa241951d20",
+            "delay_seconds": 300,
+            "ttl_seconds": null,
+            "active_cleanup": false,
+            "expire_cleanup": false,
+            "background_activity": false,
+            "key_set_size": 128,
+            "cache_size_limit": 1073741824,
+            "repeats": 3,
+            "recovered_count": 3,
+            "receiver_metrics": [
+              {
+                "delivered_bits": 256,
+                "ber_total": 0.0,
+                "latency_seconds_median": 300.01216599997133
+              },
+              {
+                "delivered_bits": 256,
+                "ber_total": 0.0,
+                "latency_seconds_median": 300.0101907500066
+              },
+              {
+                "delivered_bits": 256,
+                "ber_total": 0.0,
+                "latency_seconds_median": 300.01147804223
+              }
+            ],
+            "recovered_fraction": 1.0,
+            "logically_recovered": true
+          }
+        ],
+        "summary": {
+          "curve": [
+            {
+              "delay_seconds": 0,
+              "recovered_count": 3,
+              "repeats": 3,
+              "recovered_fraction": 1.0
+            },
+            {
+              "delay_seconds": 1,
+              "recovered_count": 3,
+              "repeats": 3,
+              "recovered_fraction": 1.0
+            },
+            {
+              "delay_seconds": 10,
+              "recovered_count": 3,
+              "repeats": 3,
+              "recovered_fraction": 1.0
+            },
+            {
+              "delay_seconds": 60,
+              "recovered_count": 3,
+              "repeats": 3,
+              "recovered_fraction": 1.0
+            },
+            {
+              "delay_seconds": 300,
+              "recovered_count": 3,
+              "repeats": 3,
+              "recovered_fraction": 1.0
+            }
+          ],
+          "summary": "recoverable for at least the tested 300 s (all repeats of every delay point recovered)"
+        }
+      }
+    },
+    "M2": {
+      "baseline": {
+        "points": [
+          {
+            "method": "M2",
+            "condition": "baseline",
+            "payload": "common",
+            "payload_bytes": 9,
+            "payload_sha256": "e3c8dc8f7c0e4479e39ca777262f907a8c10b1afbc732033edef7f4ccfd3b771",
+            "delay_seconds": 0,
+            "ttl_seconds": null,
+            "active_cleanup": false,
+            "expire_cleanup": false,
+            "background_activity": false,
+            "key_set_size": 128,
+            "cache_size_limit": 1073741824,
+            "repeats": 3,
+            "recovered_count": 3,
+            "receiver_metrics": [
+              {
+                "delivered_bits": 72,
+                "ber_total": 0.0,
+                "latency_seconds_median": 0.004561999812722206
+              },
+              {
+                "delivered_bits": 72,
+                "ber_total": 0.0,
+                "latency_seconds_median": 0.0013880417682230473
+              },
+              {
+                "delivered_bits": 72,
+                "ber_total": 0.0,
+                "latency_seconds_median": 0.002206707838922739
+              }
+            ],
+            "recovered_fraction": 1.0,
+            "logically_recovered": true
+          },
+          {
+            "method": "M2",
+            "condition": "baseline",
+            "payload": "common",
+            "payload_bytes": 9,
+            "payload_sha256": "e3c8dc8f7c0e4479e39ca777262f907a8c10b1afbc732033edef7f4ccfd3b771",
+            "delay_seconds": 1,
+            "ttl_seconds": null,
+            "active_cleanup": false,
+            "expire_cleanup": false,
+            "background_activity": false,
+            "key_set_size": 128,
+            "cache_size_limit": 1073741824,
+            "repeats": 3,
+            "recovered_count": 3,
+            "receiver_metrics": [
+              {
+                "delivered_bits": 72,
+                "ber_total": 0.0,
+                "latency_seconds_median": 1.0072712078690529
+              },
+              {
+                "delivered_bits": 72,
+                "ber_total": 0.0,
+                "latency_seconds_median": 1.0030578328296542
+              },
+              {
+                "delivered_bits": 72,
+                "ber_total": 0.0,
+                "latency_seconds_median": 1.0058447918854654
+              }
+            ],
+            "recovered_fraction": 1.0,
+            "logically_recovered": true
+          },
+          {
+            "method": "M2",
+            "condition": "baseline",
+            "payload": "common",
+            "payload_bytes": 9,
+            "payload_sha256": "e3c8dc8f7c0e4479e39ca777262f907a8c10b1afbc732033edef7f4ccfd3b771",
+            "delay_seconds": 10,
+            "ttl_seconds": null,
+            "active_cleanup": false,
+            "expire_cleanup": false,
+            "background_activity": false,
+            "key_set_size": 128,
+            "cache_size_limit": 1073741824,
+            "repeats": 3,
+            "recovered_count": 3,
+            "receiver_metrics": [
+              {
+                "delivered_bits": 72,
+                "ber_total": 0.0,
+                "latency_seconds_median": 10.004176374990493
+              },
+              {
+                "delivered_bits": 72,
+                "ber_total": 0.0,
+                "latency_seconds_median": 10.003912874963135
+              },
+              {
+                "delivered_bits": 72,
+                "ber_total": 0.0,
+                "latency_seconds_median": 10.003838624805212
+              }
+            ],
+            "recovered_fraction": 1.0,
+            "logically_recovered": true
+          },
+          {
+            "method": "M2",
+            "condition": "baseline",
+            "payload": "common",
+            "payload_bytes": 9,
+            "payload_sha256": "e3c8dc8f7c0e4479e39ca777262f907a8c10b1afbc732033edef7f4ccfd3b771",
+            "delay_seconds": 60,
+            "ttl_seconds": null,
+            "active_cleanup": false,
+            "expire_cleanup": false,
+            "background_activity": false,
+            "key_set_size": 128,
+            "cache_size_limit": 1073741824,
+            "repeats": 3,
+            "recovered_count": 3,
+            "receiver_metrics": [
+              {
+                "delivered_bits": 72,
+                "ber_total": 0.0,
+                "latency_seconds_median": 60.00613254122436
+              },
+              {
+                "delivered_bits": 72,
+                "ber_total": 0.0,
+                "latency_seconds_median": 60.00921645807102
+              },
+              {
+                "delivered_bits": 72,
+                "ber_total": 0.0,
+                "latency_seconds_median": 60.00613495800644
+              }
+            ],
+            "recovered_fraction": 1.0,
+            "logically_recovered": true
+          },
+          {
+            "method": "M2",
+            "condition": "baseline",
+            "payload": "common",
+            "payload_bytes": 9,
+            "payload_sha256": "e3c8dc8f7c0e4479e39ca777262f907a8c10b1afbc732033edef7f4ccfd3b771",
+            "delay_seconds": 300,
+            "ttl_seconds": null,
+            "active_cleanup": false,
+            "expire_cleanup": false,
+            "background_activity": false,
+            "key_set_size": 128,
+            "cache_size_limit": 1073741824,
+            "repeats": 3,
+            "recovered_count": 3,
+            "receiver_metrics": [
+              {
+                "delivered_bits": 72,
+                "ber_total": 0.0,
+                "latency_seconds_median": 300.0090318340808
+              },
+              {
+                "delivered_bits": 72,
+                "ber_total": 0.0,
+                "latency_seconds_median": 300.01601900020614
+              },
+              {
+                "delivered_bits": 72,
+                "ber_total": 0.0,
+                "latency_seconds_median": 300.01053454121575
+              }
+            ],
+            "recovered_fraction": 1.0,
+            "logically_recovered": true
+          }
+        ],
+        "summary": {
+          "curve": [
+            {
+              "delay_seconds": 0,
+              "recovered_count": 3,
+              "repeats": 3,
+              "recovered_fraction": 1.0
+            },
+            {
+              "delay_seconds": 1,
+              "recovered_count": 3,
+              "repeats": 3,
+              "recovered_fraction": 1.0
+            },
+            {
+              "delay_seconds": 10,
+              "recovered_count": 3,
+              "repeats": 3,
+              "recovered_fraction": 1.0
+            },
+            {
+              "delay_seconds": 60,
+              "recovered_count": 3,
+              "repeats": 3,
+              "recovered_fraction": 1.0
+            },
+            {
+              "delay_seconds": 300,
+              "recovered_count": 3,
+              "repeats": 3,
+              "recovered_fraction": 1.0
+            }
+          ],
+          "summary": "recoverable for at least the tested 300 s (all repeats of every delay point recovered)"
+        }
+      },
+      "active-cleanup": {
+        "points": [
+          {
+            "method": "M2",
+            "condition": "active-cleanup",
+            "payload": "common",
+            "payload_bytes": 9,
+            "payload_sha256": "e3c8dc8f7c0e4479e39ca777262f907a8c10b1afbc732033edef7f4ccfd3b771",
+            "delay_seconds": 0,
+            "ttl_seconds": null,
+            "active_cleanup": true,
+            "expire_cleanup": false,
+            "background_activity": false,
+            "key_set_size": 128,
+            "cache_size_limit": 1073741824,
+            "repeats": 3,
+            "recovered_count": 0,
+            "receiver_metrics": [
+              {
+                "delivered_bits": 0,
+                "ber_total": null,
+                "latency_seconds_median": null
+              },
+              {
+                "delivered_bits": 0,
+                "ber_total": null,
+                "latency_seconds_median": null
+              },
+              {
+                "delivered_bits": 0,
+                "ber_total": null,
+                "latency_seconds_median": null
+              }
+            ],
+            "recovered_fraction": 0.0,
+            "logically_recovered": false
+          },
+          {
+            "method": "M2",
+            "condition": "active-cleanup",
+            "payload": "common",
+            "payload_bytes": 9,
+            "payload_sha256": "e3c8dc8f7c0e4479e39ca777262f907a8c10b1afbc732033edef7f4ccfd3b771",
+            "delay_seconds": 1,
+            "ttl_seconds": null,
+            "active_cleanup": true,
+            "expire_cleanup": false,
+            "background_activity": false,
+            "key_set_size": 128,
+            "cache_size_limit": 1073741824,
+            "repeats": 3,
+            "recovered_count": 0,
+            "receiver_metrics": [
+              {
+                "delivered_bits": 0,
+                "ber_total": null,
+                "latency_seconds_median": null
+              },
+              {
+                "delivered_bits": 0,
+                "ber_total": null,
+                "latency_seconds_median": null
+              },
+              {
+                "delivered_bits": 0,
+                "ber_total": null,
+                "latency_seconds_median": null
+              }
+            ],
+            "recovered_fraction": 0.0,
+            "logically_recovered": false
+          },
+          {
+            "method": "M2",
+            "condition": "active-cleanup",
+            "payload": "common",
+            "payload_bytes": 9,
+            "payload_sha256": "e3c8dc8f7c0e4479e39ca777262f907a8c10b1afbc732033edef7f4ccfd3b771",
+            "delay_seconds": 10,
+            "ttl_seconds": null,
+            "active_cleanup": true,
+            "expire_cleanup": false,
+            "background_activity": false,
+            "key_set_size": 128,
+            "cache_size_limit": 1073741824,
+            "repeats": 3,
+            "recovered_count": 0,
+            "receiver_metrics": [
+              {
+                "delivered_bits": 0,
+                "ber_total": null,
+                "latency_seconds_median": null
+              },
+              {
+                "delivered_bits": 0,
+                "ber_total": null,
+                "latency_seconds_median": null
+              },
+              {
+                "delivered_bits": 0,
+                "ber_total": null,
+                "latency_seconds_median": null
+              }
+            ],
+            "recovered_fraction": 0.0,
+            "logically_recovered": false
+          },
+          {
+            "method": "M2",
+            "condition": "active-cleanup",
+            "payload": "common",
+            "payload_bytes": 9,
+            "payload_sha256": "e3c8dc8f7c0e4479e39ca777262f907a8c10b1afbc732033edef7f4ccfd3b771",
+            "delay_seconds": 60,
+            "ttl_seconds": null,
+            "active_cleanup": true,
+            "expire_cleanup": false,
+            "background_activity": false,
+            "key_set_size": 128,
+            "cache_size_limit": 1073741824,
+            "repeats": 3,
+            "recovered_count": 0,
+            "receiver_metrics": [
+              {
+                "delivered_bits": 0,
+                "ber_total": null,
+                "latency_seconds_median": null
+              },
+              {
+                "delivered_bits": 0,
+                "ber_total": null,
+                "latency_seconds_median": null
+              },
+              {
+                "delivered_bits": 0,
+                "ber_total": null,
+                "latency_seconds_median": null
+              }
+            ],
+            "recovered_fraction": 0.0,
+            "logically_recovered": false
+          },
+          {
+            "method": "M2",
+            "condition": "active-cleanup",
+            "payload": "common",
+            "payload_bytes": 9,
+            "payload_sha256": "e3c8dc8f7c0e4479e39ca777262f907a8c10b1afbc732033edef7f4ccfd3b771",
+            "delay_seconds": 300,
+            "ttl_seconds": null,
+            "active_cleanup": true,
+            "expire_cleanup": false,
+            "background_activity": false,
+            "key_set_size": 128,
+            "cache_size_limit": 1073741824,
+            "repeats": 3,
+            "recovered_count": 0,
+            "receiver_metrics": [
+              {
+                "delivered_bits": 0,
+                "ber_total": null,
+                "latency_seconds_median": null
+              },
+              {
+                "delivered_bits": 0,
+                "ber_total": null,
+                "latency_seconds_median": null
+              },
+              {
+                "delivered_bits": 0,
+                "ber_total": null,
+                "latency_seconds_median": null
+              }
+            ],
+            "recovered_fraction": 0.0,
+            "logically_recovered": false
+          }
+        ],
+        "summary": {
+          "curve": [
+            {
+              "delay_seconds": 0,
+              "recovered_count": 0,
+              "repeats": 3,
+              "recovered_fraction": 0.0
+            },
+            {
+              "delay_seconds": 1,
+              "recovered_count": 0,
+              "repeats": 3,
+              "recovered_fraction": 0.0
+            },
+            {
+              "delay_seconds": 10,
+              "recovered_count": 0,
+              "repeats": 3,
+              "recovered_fraction": 0.0
+            },
+            {
+              "delay_seconds": 60,
+              "recovered_count": 0,
+              "repeats": 3,
+              "recovered_fraction": 0.0
+            },
+            {
+              "delay_seconds": 300,
+              "recovered_count": 0,
+              "repeats": 3,
+              "recovered_fraction": 0.0
+            }
+          ],
+          "summary": "recoverability lost before 300 s under this condition"
+        }
+      },
+      "background-activity": {
+        "points": [
+          {
+            "method": "M2",
+            "condition": "background-activity",
+            "payload": "common",
+            "payload_bytes": 9,
+            "payload_sha256": "e3c8dc8f7c0e4479e39ca777262f907a8c10b1afbc732033edef7f4ccfd3b771",
+            "delay_seconds": 0,
+            "ttl_seconds": null,
+            "active_cleanup": false,
+            "expire_cleanup": false,
+            "background_activity": true,
+            "key_set_size": 128,
+            "cache_size_limit": 1073741824,
+            "repeats": 3,
+            "recovered_count": 3,
+            "receiver_metrics": [
+              {
+                "delivered_bits": 72,
+                "ber_total": 0.0,
+                "latency_seconds_median": 0.004230958875268698
+              },
+              {
+                "delivered_bits": 72,
+                "ber_total": 0.0,
+                "latency_seconds_median": 0.0012012920342385769
+              },
+              {
+                "delivered_bits": 72,
+                "ber_total": 0.0,
+                "latency_seconds_median": 0.0008015832863748074
+              }
+            ],
+            "recovered_fraction": 1.0,
+            "logically_recovered": true
+          },
+          {
+            "method": "M2",
+            "condition": "background-activity",
+            "payload": "common",
+            "payload_bytes": 9,
+            "payload_sha256": "e3c8dc8f7c0e4479e39ca777262f907a8c10b1afbc732033edef7f4ccfd3b771",
+            "delay_seconds": 1,
+            "ttl_seconds": null,
+            "active_cleanup": false,
+            "expire_cleanup": false,
+            "background_activity": true,
+            "key_set_size": 128,
+            "cache_size_limit": 1073741824,
+            "repeats": 3,
+            "recovered_count": 3,
+            "receiver_metrics": [
+              {
+                "delivered_bits": 72,
+                "ber_total": 0.0,
+                "latency_seconds_median": 1.001763999927789
+              },
+              {
+                "delivered_bits": 72,
+                "ber_total": 0.0,
+                "latency_seconds_median": 1.0061377920210361
+              },
+              {
+                "delivered_bits": 72,
+                "ber_total": 0.0,
+                "latency_seconds_median": 1.0063028750009835
+              }
+            ],
+            "recovered_fraction": 1.0,
+            "logically_recovered": true
+          },
+          {
+            "method": "M2",
+            "condition": "background-activity",
+            "payload": "common",
+            "payload_bytes": 9,
+            "payload_sha256": "e3c8dc8f7c0e4479e39ca777262f907a8c10b1afbc732033edef7f4ccfd3b771",
+            "delay_seconds": 10,
+            "ttl_seconds": null,
+            "active_cleanup": false,
+            "expire_cleanup": false,
+            "background_activity": true,
+            "key_set_size": 128,
+            "cache_size_limit": 1073741824,
+            "repeats": 3,
+            "recovered_count": 3,
+            "receiver_metrics": [
+              {
+                "delivered_bits": 72,
+                "ber_total": 0.0,
+                "latency_seconds_median": 10.002911750227213
+              },
+              {
+                "delivered_bits": 72,
+                "ber_total": 0.0,
+                "latency_seconds_median": 10.007229333277792
+              },
+              {
+                "delivered_bits": 72,
+                "ber_total": 0.0,
+                "latency_seconds_median": 10.004606041591614
+              }
+            ],
+            "recovered_fraction": 1.0,
+            "logically_recovered": true
+          },
+          {
+            "method": "M2",
+            "condition": "background-activity",
+            "payload": "common",
+            "payload_bytes": 9,
+            "payload_sha256": "e3c8dc8f7c0e4479e39ca777262f907a8c10b1afbc732033edef7f4ccfd3b771",
+            "delay_seconds": 60,
+            "ttl_seconds": null,
+            "active_cleanup": false,
+            "expire_cleanup": false,
+            "background_activity": true,
+            "key_set_size": 128,
+            "cache_size_limit": 1073741824,
+            "repeats": 3,
+            "recovered_count": 3,
+            "receiver_metrics": [
+              {
+                "delivered_bits": 72,
+                "ber_total": 0.0,
+                "latency_seconds_median": 60.00425466708839
+              },
+              {
+                "delivered_bits": 72,
+                "ber_total": 0.0,
+                "latency_seconds_median": 60.00318737467751
+              },
+              {
+                "delivered_bits": 72,
+                "ber_total": 0.0,
+                "latency_seconds_median": 60.00419095903635
+              }
+            ],
+            "recovered_fraction": 1.0,
+            "logically_recovered": true
+          },
+          {
+            "method": "M2",
+            "condition": "background-activity",
+            "payload": "common",
+            "payload_bytes": 9,
+            "payload_sha256": "e3c8dc8f7c0e4479e39ca777262f907a8c10b1afbc732033edef7f4ccfd3b771",
+            "delay_seconds": 300,
+            "ttl_seconds": null,
+            "active_cleanup": false,
+            "expire_cleanup": false,
+            "background_activity": true,
+            "key_set_size": 128,
+            "cache_size_limit": 1073741824,
+            "repeats": 3,
+            "recovered_count": 3,
+            "receiver_metrics": [
+              {
+                "delivered_bits": 72,
+                "ber_total": 0.0,
+                "latency_seconds_median": 300.00870916619897
+              },
+              {
+                "delivered_bits": 72,
+                "ber_total": 0.0,
+                "latency_seconds_median": 300.0044900001958
+              },
+              {
+                "delivered_bits": 72,
+                "ber_total": 0.0,
+                "latency_seconds_median": 300.01233383407816
+              }
+            ],
+            "recovered_fraction": 1.0,
+            "logically_recovered": true
+          }
+        ],
+        "summary": {
+          "curve": [
+            {
+              "delay_seconds": 0,
+              "recovered_count": 3,
+              "repeats": 3,
+              "recovered_fraction": 1.0
+            },
+            {
+              "delay_seconds": 1,
+              "recovered_count": 3,
+              "repeats": 3,
+              "recovered_fraction": 1.0
+            },
+            {
+              "delay_seconds": 10,
+              "recovered_count": 3,
+              "repeats": 3,
+              "recovered_fraction": 1.0
+            },
+            {
+              "delay_seconds": 60,
+              "recovered_count": 3,
+              "repeats": 3,
+              "recovered_fraction": 1.0
+            },
+            {
+              "delay_seconds": 300,
+              "recovered_count": 3,
+              "repeats": 3,
+              "recovered_fraction": 1.0
+            }
+          ],
+          "summary": "recoverable for at least the tested 300 s (all repeats of every delay point recovered)"
+        }
+      },
+      "native-size": {
+        "points": [
+          {
+            "method": "M2",
+            "condition": "native-size",
+            "payload": "native",
+            "payload_bytes": 32,
+            "payload_sha256": "0f6b38ec9eb11f785f6e981c020aa4389ea6b5989406a1ffebce2aa241951d20",
+            "delay_seconds": 0,
+            "ttl_seconds": null,
+            "active_cleanup": false,
+            "expire_cleanup": false,
+            "background_activity": false,
+            "key_set_size": 128,
+            "cache_size_limit": 1073741824,
+            "repeats": 3,
+            "recovered_count": 3,
+            "receiver_metrics": [
+              {
+                "delivered_bits": 256,
+                "ber_total": 0.0,
+                "latency_seconds_median": 0.0024630422703921795
+              },
+              {
+                "delivered_bits": 256,
+                "ber_total": 0.0,
+                "latency_seconds_median": 0.0013140002265572548
+              },
+              {
+                "delivered_bits": 256,
+                "ber_total": 0.0,
+                "latency_seconds_median": 0.00220829201862216
+              }
+            ],
+            "recovered_fraction": 1.0,
+            "logically_recovered": true
+          },
+          {
+            "method": "M2",
+            "condition": "native-size",
+            "payload": "native",
+            "payload_bytes": 32,
+            "payload_sha256": "0f6b38ec9eb11f785f6e981c020aa4389ea6b5989406a1ffebce2aa241951d20",
+            "delay_seconds": 1,
+            "ttl_seconds": null,
+            "active_cleanup": false,
+            "expire_cleanup": false,
+            "background_activity": false,
+            "key_set_size": 128,
+            "cache_size_limit": 1073741824,
+            "repeats": 3,
+            "recovered_count": 3,
+            "receiver_metrics": [
+              {
+                "delivered_bits": 256,
+                "ber_total": 0.0,
+                "latency_seconds_median": 1.00840233406052
+              },
+              {
+                "delivered_bits": 256,
+                "ber_total": 0.0,
+                "latency_seconds_median": 1.0119170830585063
+              },
+              {
+                "delivered_bits": 256,
+                "ber_total": 0.0,
+                "latency_seconds_median": 1.0072031249292195
+              }
+            ],
+            "recovered_fraction": 1.0,
+            "logically_recovered": true
+          },
+          {
+            "method": "M2",
+            "condition": "native-size",
+            "payload": "native",
+            "payload_bytes": 32,
+            "payload_sha256": "0f6b38ec9eb11f785f6e981c020aa4389ea6b5989406a1ffebce2aa241951d20",
+            "delay_seconds": 10,
+            "ttl_seconds": null,
+            "active_cleanup": false,
+            "expire_cleanup": false,
+            "background_activity": false,
+            "key_set_size": 128,
+            "cache_size_limit": 1073741824,
+            "repeats": 3,
+            "recovered_count": 3,
+            "receiver_metrics": [
+              {
+                "delivered_bits": 256,
+                "ber_total": 0.0,
+                "latency_seconds_median": 10.009610792156309
+              },
+              {
+                "delivered_bits": 256,
+                "ber_total": 0.0,
+                "latency_seconds_median": 10.011989832855761
+              },
+              {
+                "delivered_bits": 256,
+                "ber_total": 0.0,
+                "latency_seconds_median": 10.009552916977555
+              }
+            ],
+            "recovered_fraction": 1.0,
+            "logically_recovered": true
+          },
+          {
+            "method": "M2",
+            "condition": "native-size",
+            "payload": "native",
+            "payload_bytes": 32,
+            "payload_sha256": "0f6b38ec9eb11f785f6e981c020aa4389ea6b5989406a1ffebce2aa241951d20",
+            "delay_seconds": 60,
+            "ttl_seconds": null,
+            "active_cleanup": false,
+            "expire_cleanup": false,
+            "background_activity": false,
+            "key_set_size": 128,
+            "cache_size_limit": 1073741824,
+            "repeats": 3,
+            "recovered_count": 3,
+            "receiver_metrics": [
+              {
+                "delivered_bits": 256,
+                "ber_total": 0.0,
+                "latency_seconds_median": 60.010610207915306
+              },
+              {
+                "delivered_bits": 256,
+                "ber_total": 0.0,
+                "latency_seconds_median": 60.00808133324608
+              },
+              {
+                "delivered_bits": 256,
+                "ber_total": 0.0,
+                "latency_seconds_median": 60.01502183265984
+              }
+            ],
+            "recovered_fraction": 1.0,
+            "logically_recovered": true
+          },
+          {
+            "method": "M2",
+            "condition": "native-size",
+            "payload": "native",
+            "payload_bytes": 32,
+            "payload_sha256": "0f6b38ec9eb11f785f6e981c020aa4389ea6b5989406a1ffebce2aa241951d20",
+            "delay_seconds": 300,
+            "ttl_seconds": null,
+            "active_cleanup": false,
+            "expire_cleanup": false,
+            "background_activity": false,
+            "key_set_size": 128,
+            "cache_size_limit": 1073741824,
+            "repeats": 3,
+            "recovered_count": 3,
+            "receiver_metrics": [
+              {
+                "delivered_bits": 256,
+                "ber_total": 0.0,
+                "latency_seconds_median": 300.0138150001876
+              },
+              {
+                "delivered_bits": 256,
+                "ber_total": 0.0,
+                "latency_seconds_median": 300.0173737918958
+              },
+              {
+                "delivered_bits": 256,
+                "ber_total": 0.0,
+                "latency_seconds_median": 300.0063693751581
+              }
+            ],
+            "recovered_fraction": 1.0,
+            "logically_recovered": true
+          }
+        ],
+        "summary": {
+          "curve": [
+            {
+              "delay_seconds": 0,
+              "recovered_count": 3,
+              "repeats": 3,
+              "recovered_fraction": 1.0
+            },
+            {
+              "delay_seconds": 1,
+              "recovered_count": 3,
+              "repeats": 3,
+              "recovered_fraction": 1.0
+            },
+            {
+              "delay_seconds": 10,
+              "recovered_count": 3,
+              "repeats": 3,
+              "recovered_fraction": 1.0
+            },
+            {
+              "delay_seconds": 60,
+              "recovered_count": 3,
+              "repeats": 3,
+              "recovered_fraction": 1.0
+            },
+            {
+              "delay_seconds": 300,
+              "recovered_count": 3,
+              "repeats": 3,
+              "recovered_fraction": 1.0
+            }
+          ],
+          "summary": "recoverable for at least the tested 300 s (all repeats of every delay point recovered)"
+        }
+      }
+    },
+    "M3": {
+      "baseline": {
+        "points": [
+          {
+            "method": "M3",
+            "condition": "baseline",
+            "payload": "common",
+            "payload_bytes": 9,
+            "payload_sha256": "e3c8dc8f7c0e4479e39ca777262f907a8c10b1afbc732033edef7f4ccfd3b771",
+            "delay_seconds": 0,
+            "ttl_seconds": null,
+            "active_cleanup": false,
+            "expire_cleanup": false,
+            "background_activity": false,
+            "key_set_size": 128,
+            "cache_size_limit": 1073741824,
+            "repeats": 3,
+            "recovered_count": 3,
+            "receiver_metrics": [
+              {
+                "delivered_bits": 72,
+                "ber_total": 0.0,
+                "latency_seconds_median": 0.031507874839007854
+              },
+              {
+                "delivered_bits": 72,
+                "ber_total": 0.0,
+                "latency_seconds_median": 0.011950875166803598
+              },
+              {
+                "delivered_bits": 72,
+                "ber_total": 0.0,
+                "latency_seconds_median": 0.013585458975285292
+              }
+            ],
+            "recovered_fraction": 1.0,
+            "logically_recovered": true
+          },
+          {
+            "method": "M3",
+            "condition": "baseline",
+            "payload": "common",
+            "payload_bytes": 9,
+            "payload_sha256": "e3c8dc8f7c0e4479e39ca777262f907a8c10b1afbc732033edef7f4ccfd3b771",
+            "delay_seconds": 1,
+            "ttl_seconds": null,
+            "active_cleanup": false,
+            "expire_cleanup": false,
+            "background_activity": false,
+            "key_set_size": 128,
+            "cache_size_limit": 1073741824,
+            "repeats": 3,
+            "recovered_count": 3,
+            "receiver_metrics": [
+              {
+                "delivered_bits": 72,
+                "ber_total": 0.0,
+                "latency_seconds_median": 1.022292833775282
+              },
+              {
+                "delivered_bits": 72,
+                "ber_total": 0.0,
+                "latency_seconds_median": 1.0326156662777066
+              },
+              {
+                "delivered_bits": 72,
+                "ber_total": 0.0,
+                "latency_seconds_median": 1.030699416063726
+              }
+            ],
+            "recovered_fraction": 1.0,
+            "logically_recovered": true
+          },
+          {
+            "method": "M3",
+            "condition": "baseline",
+            "payload": "common",
+            "payload_bytes": 9,
+            "payload_sha256": "e3c8dc8f7c0e4479e39ca777262f907a8c10b1afbc732033edef7f4ccfd3b771",
+            "delay_seconds": 10,
+            "ttl_seconds": null,
+            "active_cleanup": false,
+            "expire_cleanup": false,
+            "background_activity": false,
+            "key_set_size": 128,
+            "cache_size_limit": 1073741824,
+            "repeats": 3,
+            "recovered_count": 3,
+            "receiver_metrics": [
+              {
+                "delivered_bits": 72,
+                "ber_total": 0.0,
+                "latency_seconds_median": 10.03030962496996
+              },
+              {
+                "delivered_bits": 72,
+                "ber_total": 0.0,
+                "latency_seconds_median": 10.028714290820062
+              },
+              {
+                "delivered_bits": 72,
+                "ber_total": 0.0,
+                "latency_seconds_median": 10.029104166664183
+              }
+            ],
+            "recovered_fraction": 1.0,
+            "logically_recovered": true
+          },
+          {
+            "method": "M3",
+            "condition": "baseline",
+            "payload": "common",
+            "payload_bytes": 9,
+            "payload_sha256": "e3c8dc8f7c0e4479e39ca777262f907a8c10b1afbc732033edef7f4ccfd3b771",
+            "delay_seconds": 60,
+            "ttl_seconds": null,
+            "active_cleanup": false,
+            "expire_cleanup": false,
+            "background_activity": false,
+            "key_set_size": 128,
+            "cache_size_limit": 1073741824,
+            "repeats": 3,
+            "recovered_count": 3,
+            "receiver_metrics": [
+              {
+                "delivered_bits": 72,
+                "ber_total": 0.0,
+                "latency_seconds_median": 60.033610166981816
+              },
+              {
+                "delivered_bits": 72,
+                "ber_total": 0.0,
+                "latency_seconds_median": 60.038810417056084
+              },
+              {
+                "delivered_bits": 72,
+                "ber_total": 0.0,
+                "latency_seconds_median": 60.03361770929769
+              }
+            ],
+            "recovered_fraction": 1.0,
+            "logically_recovered": true
+          },
+          {
+            "method": "M3",
+            "condition": "baseline",
+            "payload": "common",
+            "payload_bytes": 9,
+            "payload_sha256": "e3c8dc8f7c0e4479e39ca777262f907a8c10b1afbc732033edef7f4ccfd3b771",
+            "delay_seconds": 300,
+            "ttl_seconds": null,
+            "active_cleanup": false,
+            "expire_cleanup": false,
+            "background_activity": false,
+            "key_set_size": 128,
+            "cache_size_limit": 1073741824,
+            "repeats": 3,
+            "recovered_count": 3,
+            "receiver_metrics": [
+              {
+                "delivered_bits": 72,
+                "ber_total": 0.0,
+                "latency_seconds_median": 300.0334070827812
+              },
+              {
+                "delivered_bits": 72,
+                "ber_total": 0.0,
+                "latency_seconds_median": 300.05155179230496
+              },
+              {
+                "delivered_bits": 72,
+                "ber_total": 0.0,
+                "latency_seconds_median": 300.02416383381933
+              }
+            ],
+            "recovered_fraction": 1.0,
+            "logically_recovered": true
+          }
+        ],
+        "summary": {
+          "curve": [
+            {
+              "delay_seconds": 0,
+              "recovered_count": 3,
+              "repeats": 3,
+              "recovered_fraction": 1.0
+            },
+            {
+              "delay_seconds": 1,
+              "recovered_count": 3,
+              "repeats": 3,
+              "recovered_fraction": 1.0
+            },
+            {
+              "delay_seconds": 10,
+              "recovered_count": 3,
+              "repeats": 3,
+              "recovered_fraction": 1.0
+            },
+            {
+              "delay_seconds": 60,
+              "recovered_count": 3,
+              "repeats": 3,
+              "recovered_fraction": 1.0
+            },
+            {
+              "delay_seconds": 300,
+              "recovered_count": 3,
+              "repeats": 3,
+              "recovered_fraction": 1.0
+            }
+          ],
+          "summary": "recoverable for at least the tested 300 s (all repeats of every delay point recovered)"
+        }
+      },
+      "active-cleanup": {
+        "points": [
+          {
+            "method": "M3",
+            "condition": "active-cleanup",
+            "payload": "common",
+            "payload_bytes": 9,
+            "payload_sha256": "e3c8dc8f7c0e4479e39ca777262f907a8c10b1afbc732033edef7f4ccfd3b771",
+            "delay_seconds": 0,
+            "ttl_seconds": null,
+            "active_cleanup": true,
+            "expire_cleanup": false,
+            "background_activity": false,
+            "key_set_size": 128,
+            "cache_size_limit": 1073741824,
+            "repeats": 3,
+            "recovered_count": 0,
+            "receiver_metrics": [
+              {
+                "delivered_bits": 0,
+                "ber_total": null,
+                "latency_seconds_median": null
+              },
+              {
+                "delivered_bits": 0,
+                "ber_total": null,
+                "latency_seconds_median": null
+              },
+              {
+                "delivered_bits": 0,
+                "ber_total": null,
+                "latency_seconds_median": null
+              }
+            ],
+            "recovered_fraction": 0.0,
+            "logically_recovered": false
+          },
+          {
+            "method": "M3",
+            "condition": "active-cleanup",
+            "payload": "common",
+            "payload_bytes": 9,
+            "payload_sha256": "e3c8dc8f7c0e4479e39ca777262f907a8c10b1afbc732033edef7f4ccfd3b771",
+            "delay_seconds": 1,
+            "ttl_seconds": null,
+            "active_cleanup": true,
+            "expire_cleanup": false,
+            "background_activity": false,
+            "key_set_size": 128,
+            "cache_size_limit": 1073741824,
+            "repeats": 3,
+            "recovered_count": 0,
+            "receiver_metrics": [
+              {
+                "delivered_bits": 0,
+                "ber_total": null,
+                "latency_seconds_median": null
+              },
+              {
+                "delivered_bits": 0,
+                "ber_total": null,
+                "latency_seconds_median": null
+              },
+              {
+                "delivered_bits": 0,
+                "ber_total": null,
+                "latency_seconds_median": null
+              }
+            ],
+            "recovered_fraction": 0.0,
+            "logically_recovered": false
+          },
+          {
+            "method": "M3",
+            "condition": "active-cleanup",
+            "payload": "common",
+            "payload_bytes": 9,
+            "payload_sha256": "e3c8dc8f7c0e4479e39ca777262f907a8c10b1afbc732033edef7f4ccfd3b771",
+            "delay_seconds": 10,
+            "ttl_seconds": null,
+            "active_cleanup": true,
+            "expire_cleanup": false,
+            "background_activity": false,
+            "key_set_size": 128,
+            "cache_size_limit": 1073741824,
+            "repeats": 3,
+            "recovered_count": 0,
+            "receiver_metrics": [
+              {
+                "delivered_bits": 0,
+                "ber_total": null,
+                "latency_seconds_median": null
+              },
+              {
+                "delivered_bits": 0,
+                "ber_total": null,
+                "latency_seconds_median": null
+              },
+              {
+                "delivered_bits": 0,
+                "ber_total": null,
+                "latency_seconds_median": null
+              }
+            ],
+            "recovered_fraction": 0.0,
+            "logically_recovered": false
+          },
+          {
+            "method": "M3",
+            "condition": "active-cleanup",
+            "payload": "common",
+            "payload_bytes": 9,
+            "payload_sha256": "e3c8dc8f7c0e4479e39ca777262f907a8c10b1afbc732033edef7f4ccfd3b771",
+            "delay_seconds": 60,
+            "ttl_seconds": null,
+            "active_cleanup": true,
+            "expire_cleanup": false,
+            "background_activity": false,
+            "key_set_size": 128,
+            "cache_size_limit": 1073741824,
+            "repeats": 3,
+            "recovered_count": 0,
+            "receiver_metrics": [
+              {
+                "delivered_bits": 0,
+                "ber_total": null,
+                "latency_seconds_median": null
+              },
+              {
+                "delivered_bits": 0,
+                "ber_total": null,
+                "latency_seconds_median": null
+              },
+              {
+                "delivered_bits": 0,
+                "ber_total": null,
+                "latency_seconds_median": null
+              }
+            ],
+            "recovered_fraction": 0.0,
+            "logically_recovered": false
+          },
+          {
+            "method": "M3",
+            "condition": "active-cleanup",
+            "payload": "common",
+            "payload_bytes": 9,
+            "payload_sha256": "e3c8dc8f7c0e4479e39ca777262f907a8c10b1afbc732033edef7f4ccfd3b771",
+            "delay_seconds": 300,
+            "ttl_seconds": null,
+            "active_cleanup": true,
+            "expire_cleanup": false,
+            "background_activity": false,
+            "key_set_size": 128,
+            "cache_size_limit": 1073741824,
+            "repeats": 3,
+            "recovered_count": 0,
+            "receiver_metrics": [
+              {
+                "delivered_bits": 0,
+                "ber_total": null,
+                "latency_seconds_median": null
+              },
+              {
+                "delivered_bits": 0,
+                "ber_total": null,
+                "latency_seconds_median": null
+              },
+              {
+                "delivered_bits": 0,
+                "ber_total": null,
+                "latency_seconds_median": null
+              }
+            ],
+            "recovered_fraction": 0.0,
+            "logically_recovered": false
+          }
+        ],
+        "summary": {
+          "curve": [
+            {
+              "delay_seconds": 0,
+              "recovered_count": 0,
+              "repeats": 3,
+              "recovered_fraction": 0.0
+            },
+            {
+              "delay_seconds": 1,
+              "recovered_count": 0,
+              "repeats": 3,
+              "recovered_fraction": 0.0
+            },
+            {
+              "delay_seconds": 10,
+              "recovered_count": 0,
+              "repeats": 3,
+              "recovered_fraction": 0.0
+            },
+            {
+              "delay_seconds": 60,
+              "recovered_count": 0,
+              "repeats": 3,
+              "recovered_fraction": 0.0
+            },
+            {
+              "delay_seconds": 300,
+              "recovered_count": 0,
+              "repeats": 3,
+              "recovered_fraction": 0.0
+            }
+          ],
+          "summary": "recoverability lost before 300 s under this condition"
+        }
+      },
+      "background-activity": {
+        "points": [
+          {
+            "method": "M3",
+            "condition": "background-activity",
+            "payload": "common",
+            "payload_bytes": 9,
+            "payload_sha256": "e3c8dc8f7c0e4479e39ca777262f907a8c10b1afbc732033edef7f4ccfd3b771",
+            "delay_seconds": 0,
+            "ttl_seconds": null,
+            "active_cleanup": false,
+            "expire_cleanup": false,
+            "background_activity": true,
+            "key_set_size": 128,
+            "cache_size_limit": 1048576,
+            "repeats": 3,
+            "recovered_count": 3,
+            "receiver_metrics": [
+              {
+                "delivered_bits": 72,
+                "ber_total": 0.0,
+                "latency_seconds_median": 0.021673833951354027
+              },
+              {
+                "delivered_bits": 72,
+                "ber_total": 0.0,
+                "latency_seconds_median": 0.009943834040313959
+              },
+              {
+                "delivered_bits": 72,
+                "ber_total": 0.0,
+                "latency_seconds_median": 0.009553082752972841
+              }
+            ],
+            "recovered_fraction": 1.0,
+            "logically_recovered": true
+          },
+          {
+            "method": "M3",
+            "condition": "background-activity",
+            "payload": "common",
+            "payload_bytes": 9,
+            "payload_sha256": "e3c8dc8f7c0e4479e39ca777262f907a8c10b1afbc732033edef7f4ccfd3b771",
+            "delay_seconds": 1,
+            "ttl_seconds": null,
+            "active_cleanup": false,
+            "expire_cleanup": false,
+            "background_activity": true,
+            "key_set_size": 128,
+            "cache_size_limit": 1048576,
+            "repeats": 3,
+            "recovered_count": 0,
+            "receiver_metrics": [
+              {
+                "delivered_bits": 0,
+                "ber_total": null,
+                "latency_seconds_median": null
+              },
+              {
+                "delivered_bits": 0,
+                "ber_total": null,
+                "latency_seconds_median": null
+              },
+              {
+                "delivered_bits": 0,
+                "ber_total": null,
+                "latency_seconds_median": null
+              }
+            ],
+            "recovered_fraction": 0.0,
+            "logically_recovered": false
+          },
+          {
+            "method": "M3",
+            "condition": "background-activity",
+            "payload": "common",
+            "payload_bytes": 9,
+            "payload_sha256": "e3c8dc8f7c0e4479e39ca777262f907a8c10b1afbc732033edef7f4ccfd3b771",
+            "delay_seconds": 10,
+            "ttl_seconds": null,
+            "active_cleanup": false,
+            "expire_cleanup": false,
+            "background_activity": true,
+            "key_set_size": 128,
+            "cache_size_limit": 1048576,
+            "repeats": 3,
+            "recovered_count": 0,
+            "receiver_metrics": [
+              {
+                "delivered_bits": 0,
+                "ber_total": null,
+                "latency_seconds_median": null
+              },
+              {
+                "delivered_bits": 0,
+                "ber_total": null,
+                "latency_seconds_median": null
+              },
+              {
+                "delivered_bits": 0,
+                "ber_total": null,
+                "latency_seconds_median": null
+              }
+            ],
+            "recovered_fraction": 0.0,
+            "logically_recovered": false
+          },
+          {
+            "method": "M3",
+            "condition": "background-activity",
+            "payload": "common",
+            "payload_bytes": 9,
+            "payload_sha256": "e3c8dc8f7c0e4479e39ca777262f907a8c10b1afbc732033edef7f4ccfd3b771",
+            "delay_seconds": 60,
+            "ttl_seconds": null,
+            "active_cleanup": false,
+            "expire_cleanup": false,
+            "background_activity": true,
+            "key_set_size": 128,
+            "cache_size_limit": 1048576,
+            "repeats": 3,
+            "recovered_count": 0,
+            "receiver_metrics": [
+              {
+                "delivered_bits": 0,
+                "ber_total": null,
+                "latency_seconds_median": null
+              },
+              {
+                "delivered_bits": 0,
+                "ber_total": null,
+                "latency_seconds_median": null
+              },
+              {
+                "delivered_bits": 0,
+                "ber_total": null,
+                "latency_seconds_median": null
+              }
+            ],
+            "recovered_fraction": 0.0,
+            "logically_recovered": false
+          },
+          {
+            "method": "M3",
+            "condition": "background-activity",
+            "payload": "common",
+            "payload_bytes": 9,
+            "payload_sha256": "e3c8dc8f7c0e4479e39ca777262f907a8c10b1afbc732033edef7f4ccfd3b771",
+            "delay_seconds": 300,
+            "ttl_seconds": null,
+            "active_cleanup": false,
+            "expire_cleanup": false,
+            "background_activity": true,
+            "key_set_size": 128,
+            "cache_size_limit": 1048576,
+            "repeats": 3,
+            "recovered_count": 0,
+            "receiver_metrics": [
+              {
+                "delivered_bits": 0,
+                "ber_total": null,
+                "latency_seconds_median": null
+              },
+              {
+                "delivered_bits": 0,
+                "ber_total": null,
+                "latency_seconds_median": null
+              },
+              {
+                "delivered_bits": 0,
+                "ber_total": null,
+                "latency_seconds_median": null
+              }
+            ],
+            "recovered_fraction": 0.0,
+            "logically_recovered": false
+          }
+        ],
+        "summary": {
+          "curve": [
+            {
+              "delay_seconds": 0,
+              "recovered_count": 3,
+              "repeats": 3,
+              "recovered_fraction": 1.0
+            },
+            {
+              "delay_seconds": 1,
+              "recovered_count": 0,
+              "repeats": 3,
+              "recovered_fraction": 0.0
+            },
+            {
+              "delay_seconds": 10,
+              "recovered_count": 0,
+              "repeats": 3,
+              "recovered_fraction": 0.0
+            },
+            {
+              "delay_seconds": 60,
+              "recovered_count": 0,
+              "repeats": 3,
+              "recovered_fraction": 0.0
+            },
+            {
+              "delay_seconds": 300,
+              "recovered_count": 0,
+              "repeats": 3,
+              "recovered_fraction": 0.0
+            }
+          ],
+          "summary": "recoverability lost before 300 s under this condition"
+        }
+      },
+      "ttl-1s": {
+        "points": [
+          {
+            "method": "M3",
+            "condition": "ttl-1s",
+            "payload": "common",
+            "payload_bytes": 9,
+            "payload_sha256": "e3c8dc8f7c0e4479e39ca777262f907a8c10b1afbc732033edef7f4ccfd3b771",
+            "delay_seconds": 0,
+            "ttl_seconds": 1.0,
+            "active_cleanup": false,
+            "expire_cleanup": false,
+            "background_activity": false,
+            "key_set_size": 128,
+            "cache_size_limit": 1073741824,
+            "repeats": 3,
+            "recovered_count": 3,
+            "receiver_metrics": [
+              {
+                "delivered_bits": 72,
+                "ber_total": 0.0,
+                "latency_seconds_median": 0.010956667363643646
+              },
+              {
+                "delivered_bits": 72,
+                "ber_total": 0.0,
+                "latency_seconds_median": 0.01711808331310749
+              },
+              {
+                "delivered_bits": 72,
+                "ber_total": 0.0,
+                "latency_seconds_median": 0.006757624913007021
+              }
+            ],
+            "recovered_fraction": 1.0,
+            "logically_recovered": true
+          },
+          {
+            "method": "M3",
+            "condition": "ttl-1s",
+            "payload": "common",
+            "payload_bytes": 9,
+            "payload_sha256": "e3c8dc8f7c0e4479e39ca777262f907a8c10b1afbc732033edef7f4ccfd3b771",
+            "delay_seconds": 1,
+            "ttl_seconds": 1.0,
+            "active_cleanup": false,
+            "expire_cleanup": false,
+            "background_activity": false,
+            "key_set_size": 128,
+            "cache_size_limit": 1073741824,
+            "repeats": 3,
+            "recovered_count": 0,
+            "receiver_metrics": [
+              {
+                "delivered_bits": 0,
+                "ber_total": null,
+                "latency_seconds_median": null
+              },
+              {
+                "delivered_bits": 0,
+                "ber_total": null,
+                "latency_seconds_median": null
+              },
+              {
+                "delivered_bits": 0,
+                "ber_total": null,
+                "latency_seconds_median": null
+              }
+            ],
+            "recovered_fraction": 0.0,
+            "logically_recovered": false
+          },
+          {
+            "method": "M3",
+            "condition": "ttl-1s",
+            "payload": "common",
+            "payload_bytes": 9,
+            "payload_sha256": "e3c8dc8f7c0e4479e39ca777262f907a8c10b1afbc732033edef7f4ccfd3b771",
+            "delay_seconds": 10,
+            "ttl_seconds": 1.0,
+            "active_cleanup": false,
+            "expire_cleanup": false,
+            "background_activity": false,
+            "key_set_size": 128,
+            "cache_size_limit": 1073741824,
+            "repeats": 3,
+            "recovered_count": 0,
+            "receiver_metrics": [
+              {
+                "delivered_bits": 0,
+                "ber_total": null,
+                "latency_seconds_median": null
+              },
+              {
+                "delivered_bits": 0,
+                "ber_total": null,
+                "latency_seconds_median": null
+              },
+              {
+                "delivered_bits": 0,
+                "ber_total": null,
+                "latency_seconds_median": null
+              }
+            ],
+            "recovered_fraction": 0.0,
+            "logically_recovered": false
+          },
+          {
+            "method": "M3",
+            "condition": "ttl-1s",
+            "payload": "common",
+            "payload_bytes": 9,
+            "payload_sha256": "e3c8dc8f7c0e4479e39ca777262f907a8c10b1afbc732033edef7f4ccfd3b771",
+            "delay_seconds": 60,
+            "ttl_seconds": 1.0,
+            "active_cleanup": false,
+            "expire_cleanup": false,
+            "background_activity": false,
+            "key_set_size": 128,
+            "cache_size_limit": 1073741824,
+            "repeats": 3,
+            "recovered_count": 0,
+            "receiver_metrics": [
+              {
+                "delivered_bits": 0,
+                "ber_total": null,
+                "latency_seconds_median": null
+              },
+              {
+                "delivered_bits": 0,
+                "ber_total": null,
+                "latency_seconds_median": null
+              },
+              {
+                "delivered_bits": 0,
+                "ber_total": null,
+                "latency_seconds_median": null
+              }
+            ],
+            "recovered_fraction": 0.0,
+            "logically_recovered": false
+          },
+          {
+            "method": "M3",
+            "condition": "ttl-1s",
+            "payload": "common",
+            "payload_bytes": 9,
+            "payload_sha256": "e3c8dc8f7c0e4479e39ca777262f907a8c10b1afbc732033edef7f4ccfd3b771",
+            "delay_seconds": 300,
+            "ttl_seconds": 1.0,
+            "active_cleanup": false,
+            "expire_cleanup": false,
+            "background_activity": false,
+            "key_set_size": 128,
+            "cache_size_limit": 1073741824,
+            "repeats": 3,
+            "recovered_count": 0,
+            "receiver_metrics": [
+              {
+                "delivered_bits": 0,
+                "ber_total": null,
+                "latency_seconds_median": null
+              },
+              {
+                "delivered_bits": 0,
+                "ber_total": null,
+                "latency_seconds_median": null
+              },
+              {
+                "delivered_bits": 0,
+                "ber_total": null,
+                "latency_seconds_median": null
+              }
+            ],
+            "recovered_fraction": 0.0,
+            "logically_recovered": false
+          }
+        ],
+        "summary": {
+          "curve": [
+            {
+              "delay_seconds": 0,
+              "recovered_count": 3,
+              "repeats": 3,
+              "recovered_fraction": 1.0
+            },
+            {
+              "delay_seconds": 1,
+              "recovered_count": 0,
+              "repeats": 3,
+              "recovered_fraction": 0.0
+            },
+            {
+              "delay_seconds": 10,
+              "recovered_count": 0,
+              "repeats": 3,
+              "recovered_fraction": 0.0
+            },
+            {
+              "delay_seconds": 60,
+              "recovered_count": 0,
+              "repeats": 3,
+              "recovered_fraction": 0.0
+            },
+            {
+              "delay_seconds": 300,
+              "recovered_count": 0,
+              "repeats": 3,
+              "recovered_fraction": 0.0
+            }
+          ],
+          "summary": "recoverability lost before 300 s under this condition"
+        }
+      },
+      "ttl-1s-active-cleanup": {
+        "points": [
+          {
+            "method": "M3",
+            "condition": "ttl-1s-active-cleanup",
+            "payload": "common",
+            "payload_bytes": 9,
+            "payload_sha256": "e3c8dc8f7c0e4479e39ca777262f907a8c10b1afbc732033edef7f4ccfd3b771",
+            "delay_seconds": 0,
+            "ttl_seconds": 1.0,
+            "active_cleanup": true,
+            "expire_cleanup": true,
+            "background_activity": false,
+            "key_set_size": 128,
+            "cache_size_limit": 1073741824,
+            "repeats": 3,
+            "recovered_count": 3,
+            "receiver_metrics": [
+              {
+                "delivered_bits": 72,
+                "ber_total": 0.0,
+                "latency_seconds_median": 0.009297540877014399
+              },
+              {
+                "delivered_bits": 72,
+                "ber_total": 0.0,
+                "latency_seconds_median": 0.006536291912198067
+              },
+              {
+                "delivered_bits": 72,
+                "ber_total": 0.0,
+                "latency_seconds_median": 0.006433125119656324
+              }
+            ],
+            "recovered_fraction": 1.0,
+            "logically_recovered": true
+          },
+          {
+            "method": "M3",
+            "condition": "ttl-1s-active-cleanup",
+            "payload": "common",
+            "payload_bytes": 9,
+            "payload_sha256": "e3c8dc8f7c0e4479e39ca777262f907a8c10b1afbc732033edef7f4ccfd3b771",
+            "delay_seconds": 1,
+            "ttl_seconds": 1.0,
+            "active_cleanup": true,
+            "expire_cleanup": true,
+            "background_activity": false,
+            "key_set_size": 128,
+            "cache_size_limit": 1073741824,
+            "repeats": 3,
+            "recovered_count": 0,
+            "receiver_metrics": [
+              {
+                "delivered_bits": 0,
+                "ber_total": null,
+                "latency_seconds_median": null
+              },
+              {
+                "delivered_bits": 0,
+                "ber_total": null,
+                "latency_seconds_median": null
+              },
+              {
+                "delivered_bits": 0,
+                "ber_total": null,
+                "latency_seconds_median": null
+              }
+            ],
+            "recovered_fraction": 0.0,
+            "logically_recovered": false
+          },
+          {
+            "method": "M3",
+            "condition": "ttl-1s-active-cleanup",
+            "payload": "common",
+            "payload_bytes": 9,
+            "payload_sha256": "e3c8dc8f7c0e4479e39ca777262f907a8c10b1afbc732033edef7f4ccfd3b771",
+            "delay_seconds": 10,
+            "ttl_seconds": 1.0,
+            "active_cleanup": true,
+            "expire_cleanup": true,
+            "background_activity": false,
+            "key_set_size": 128,
+            "cache_size_limit": 1073741824,
+            "repeats": 3,
+            "recovered_count": 0,
+            "receiver_metrics": [
+              {
+                "delivered_bits": 0,
+                "ber_total": null,
+                "latency_seconds_median": null
+              },
+              {
+                "delivered_bits": 0,
+                "ber_total": null,
+                "latency_seconds_median": null
+              },
+              {
+                "delivered_bits": 0,
+                "ber_total": null,
+                "latency_seconds_median": null
+              }
+            ],
+            "recovered_fraction": 0.0,
+            "logically_recovered": false
+          },
+          {
+            "method": "M3",
+            "condition": "ttl-1s-active-cleanup",
+            "payload": "common",
+            "payload_bytes": 9,
+            "payload_sha256": "e3c8dc8f7c0e4479e39ca777262f907a8c10b1afbc732033edef7f4ccfd3b771",
+            "delay_seconds": 60,
+            "ttl_seconds": 1.0,
+            "active_cleanup": true,
+            "expire_cleanup": true,
+            "background_activity": false,
+            "key_set_size": 128,
+            "cache_size_limit": 1073741824,
+            "repeats": 3,
+            "recovered_count": 0,
+            "receiver_metrics": [
+              {
+                "delivered_bits": 0,
+                "ber_total": null,
+                "latency_seconds_median": null
+              },
+              {
+                "delivered_bits": 0,
+                "ber_total": null,
+                "latency_seconds_median": null
+              },
+              {
+                "delivered_bits": 0,
+                "ber_total": null,
+                "latency_seconds_median": null
+              }
+            ],
+            "recovered_fraction": 0.0,
+            "logically_recovered": false
+          },
+          {
+            "method": "M3",
+            "condition": "ttl-1s-active-cleanup",
+            "payload": "common",
+            "payload_bytes": 9,
+            "payload_sha256": "e3c8dc8f7c0e4479e39ca777262f907a8c10b1afbc732033edef7f4ccfd3b771",
+            "delay_seconds": 300,
+            "ttl_seconds": 1.0,
+            "active_cleanup": true,
+            "expire_cleanup": true,
+            "background_activity": false,
+            "key_set_size": 128,
+            "cache_size_limit": 1073741824,
+            "repeats": 3,
+            "recovered_count": 0,
+            "receiver_metrics": [
+              {
+                "delivered_bits": 0,
+                "ber_total": null,
+                "latency_seconds_median": null
+              },
+              {
+                "delivered_bits": 0,
+                "ber_total": null,
+                "latency_seconds_median": null
+              },
+              {
+                "delivered_bits": 0,
+                "ber_total": null,
+                "latency_seconds_median": null
+              }
+            ],
+            "recovered_fraction": 0.0,
+            "logically_recovered": false
+          }
+        ],
+        "summary": {
+          "curve": [
+            {
+              "delay_seconds": 0,
+              "recovered_count": 3,
+              "repeats": 3,
+              "recovered_fraction": 1.0
+            },
+            {
+              "delay_seconds": 1,
+              "recovered_count": 0,
+              "repeats": 3,
+              "recovered_fraction": 0.0
+            },
+            {
+              "delay_seconds": 10,
+              "recovered_count": 0,
+              "repeats": 3,
+              "recovered_fraction": 0.0
+            },
+            {
+              "delay_seconds": 60,
+              "recovered_count": 0,
+              "repeats": 3,
+              "recovered_fraction": 0.0
+            },
+            {
+              "delay_seconds": 300,
+              "recovered_count": 0,
+              "repeats": 3,
+              "recovered_fraction": 0.0
+            }
+          ],
+          "summary": "recoverability lost before 300 s under this condition"
+        }
+      },
+      "native-size": {
+        "points": [
+          {
+            "method": "M3",
+            "condition": "native-size",
+            "payload": "native",
+            "payload_bytes": 9,
+            "payload_sha256": "e3c8dc8f7c0e4479e39ca777262f907a8c10b1afbc732033edef7f4ccfd3b771",
+            "delay_seconds": 0,
+            "ttl_seconds": null,
+            "active_cleanup": false,
+            "expire_cleanup": false,
+            "background_activity": false,
+            "key_set_size": 128,
+            "cache_size_limit": 1073741824,
+            "repeats": 3,
+            "recovered_count": 3,
+            "receiver_metrics": [
+              {
+                "delivered_bits": 72,
+                "ber_total": 0.0,
+                "latency_seconds_median": 0.01957070827484131
+              },
+              {
+                "delivered_bits": 72,
+                "ber_total": 0.0,
+                "latency_seconds_median": 0.010929957963526249
+              },
+              {
+                "delivered_bits": 72,
+                "ber_total": 0.0,
+                "latency_seconds_median": 0.00881974957883358
+              }
+            ],
+            "recovered_fraction": 1.0,
+            "logically_recovered": true
+          },
+          {
+            "method": "M3",
+            "condition": "native-size",
+            "payload": "native",
+            "payload_bytes": 9,
+            "payload_sha256": "e3c8dc8f7c0e4479e39ca777262f907a8c10b1afbc732033edef7f4ccfd3b771",
+            "delay_seconds": 1,
+            "ttl_seconds": null,
+            "active_cleanup": false,
+            "expire_cleanup": false,
+            "background_activity": false,
+            "key_set_size": 128,
+            "cache_size_limit": 1073741824,
+            "repeats": 3,
+            "recovered_count": 3,
+            "receiver_metrics": [
+              {
+                "delivered_bits": 72,
+                "ber_total": 0.0,
+                "latency_seconds_median": 1.0240258746780455
+              },
+              {
+                "delivered_bits": 72,
+                "ber_total": 0.0,
+                "latency_seconds_median": 1.0350595000199974
+              },
+              {
+                "delivered_bits": 72,
+                "ber_total": 0.0,
+                "latency_seconds_median": 1.0319226253777742
+              }
+            ],
+            "recovered_fraction": 1.0,
+            "logically_recovered": true
+          },
+          {
+            "method": "M3",
+            "condition": "native-size",
+            "payload": "native",
+            "payload_bytes": 9,
+            "payload_sha256": "e3c8dc8f7c0e4479e39ca777262f907a8c10b1afbc732033edef7f4ccfd3b771",
+            "delay_seconds": 10,
+            "ttl_seconds": null,
+            "active_cleanup": false,
+            "expire_cleanup": false,
+            "background_activity": false,
+            "key_set_size": 128,
+            "cache_size_limit": 1073741824,
+            "repeats": 3,
+            "recovered_count": 3,
+            "receiver_metrics": [
+              {
+                "delivered_bits": 72,
+                "ber_total": 0.0,
+                "latency_seconds_median": 10.030738333240151
+              },
+              {
+                "delivered_bits": 72,
+                "ber_total": 0.0,
+                "latency_seconds_median": 10.030984375160187
+              },
+              {
+                "delivered_bits": 72,
+                "ber_total": 0.0,
+                "latency_seconds_median": 10.029895999934524
+              }
+            ],
+            "recovered_fraction": 1.0,
+            "logically_recovered": true
+          },
+          {
+            "method": "M3",
+            "condition": "native-size",
+            "payload": "native",
+            "payload_bytes": 9,
+            "payload_sha256": "e3c8dc8f7c0e4479e39ca777262f907a8c10b1afbc732033edef7f4ccfd3b771",
+            "delay_seconds": 60,
+            "ttl_seconds": null,
+            "active_cleanup": false,
+            "expire_cleanup": false,
+            "background_activity": false,
+            "key_set_size": 128,
+            "cache_size_limit": 1073741824,
+            "repeats": 3,
+            "recovered_count": 3,
+            "receiver_metrics": [
+              {
+                "delivered_bits": 72,
+                "ber_total": 0.0,
+                "latency_seconds_median": 60.031445290893316
+              },
+              {
+                "delivered_bits": 72,
+                "ber_total": 0.0,
+                "latency_seconds_median": 60.029060791712254
+              },
+              {
+                "delivered_bits": 72,
+                "ber_total": 0.0,
+                "latency_seconds_median": 60.05064949998632
+              }
+            ],
+            "recovered_fraction": 1.0,
+            "logically_recovered": true
+          },
+          {
+            "method": "M3",
+            "condition": "native-size",
+            "payload": "native",
+            "payload_bytes": 9,
+            "payload_sha256": "e3c8dc8f7c0e4479e39ca777262f907a8c10b1afbc732033edef7f4ccfd3b771",
+            "delay_seconds": 300,
+            "ttl_seconds": null,
+            "active_cleanup": false,
+            "expire_cleanup": false,
+            "background_activity": false,
+            "key_set_size": 128,
+            "cache_size_limit": 1073741824,
+            "repeats": 3,
+            "recovered_count": 3,
+            "receiver_metrics": [
+              {
+                "delivered_bits": 72,
+                "ber_total": 0.0,
+                "latency_seconds_median": 300.03407595772296
+              },
+              {
+                "delivered_bits": 72,
+                "ber_total": 0.0,
+                "latency_seconds_median": 300.0362882921472
+              },
+              {
+                "delivered_bits": 72,
+                "ber_total": 0.0,
+                "latency_seconds_median": 300.03452374972403
+              }
+            ],
+            "recovered_fraction": 1.0,
+            "logically_recovered": true
+          }
+        ],
+        "summary": {
+          "curve": [
+            {
+              "delay_seconds": 0,
+              "recovered_count": 3,
+              "repeats": 3,
+              "recovered_fraction": 1.0
+            },
+            {
+              "delay_seconds": 1,
+              "recovered_count": 3,
+              "repeats": 3,
+              "recovered_fraction": 1.0
+            },
+            {
+              "delay_seconds": 10,
+              "recovered_count": 3,
+              "repeats": 3,
+              "recovered_fraction": 1.0
+            },
+            {
+              "delay_seconds": 60,
+              "recovered_count": 3,
+              "repeats": 3,
+              "recovered_fraction": 1.0
+            },
+            {
+              "delay_seconds": 300,
+              "recovered_count": 3,
+              "repeats": 3,
+              "recovered_fraction": 1.0
+            }
+          ],
+          "summary": "recoverable for at least the tested 300 s (all repeats of every delay point recovered)"
+        }
+      }
+    }
+  }
+}

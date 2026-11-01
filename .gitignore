@@ -5,7 +5,10 @@ __pycache__/
 workspace/
 outputs/
 runs/*
-results/
+# aggregated experiment results are tracked (reports, per-window audit
+# verdicts, seed registry); the raw per-run logs under outputs/runs are not
+!results/
+!results/**
 !runs/*.sh
 
 # Experiment artifacts

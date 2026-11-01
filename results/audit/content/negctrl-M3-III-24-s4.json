@@ -1,0 +1,45 @@
+{
+  "run_id": "negctrl-M3-III-24-s4",
+  "method": "M3",
+  "policy_mode": "separated",
+  "labels": [
+    {
+      "lo": 0,
+      "hi": 9,
+      "label": false
+    },
+    {
+      "lo": 10,
+      "hi": 19,
+      "label": false
+    },
+    {
+      "lo": 20,
+      "hi": 29,
+      "label": false
+    },
+    {
+      "lo": 30,
+      "hi": 39,
+      "label": false
+    },
+    {
+      "lo": 40,
+      "hi": 49,
+      "label": false
+    },
+    {
+      "lo": 50,
+      "hi": 59,
+      "label": false
+    }
+  ],
+  "judged": [
+    true,
+    true,
+    false,
+    true,
+    true,
+    true
+  ]
+}
