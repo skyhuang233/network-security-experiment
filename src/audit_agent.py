@@ -30,7 +30,12 @@ from typing import Any, Protocol
 
 import httpx
 from openai import OpenAI
-from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_fixed
+from tenacity import (
+    retry,
+    retry_if_exception_type,
+    stop_after_delay,
+    wait_exponential,
+)
 
 
 # ------------------------------------------------------------- LLM client (§13)
@@ -40,8 +45,8 @@ class LLMProvider(Protocol):
 
 
 @retry(
-    wait=wait_fixed(2),
-    stop=stop_after_attempt(10),
+    wait=wait_exponential(multiplier=2, min=2, max=60),
+    stop=stop_after_delay(600),
     retry=retry_if_exception_type(Exception),
     reraise=True,
 )
@@ -84,10 +89,17 @@ def provider_from_env(model: str | None = None) -> OpenAICompatibleProvider:
     return OpenAICompatibleProvider(api_base, api_key, m)
 
 
-def w_provider_from_env() -> OpenAICompatibleProvider:
+def w_provider_from_env() -> "OpenAICompatibleProvider | ScriptedProvider":
     """Monitor-W provider binding: NSE_W_MODEL (falling back to NSE_MODEL),
     same API base/key.  The fallback MUST mirror what resolved_config()
-    records as `w_model`, so the recorded config matches the executed one."""
+    records as `w_model`, so the recorded config matches the executed one.
+
+    NSE_W_PROVIDER=scripted selects the dev-only ScriptedProvider (fixed
+    CLEAN verdicts) so the audit flow can be exercised without API calls.
+    Scripted runs are dev-only and never usable as recorded experiment data.
+    """
+    if os.environ.get("NSE_W_PROVIDER") == "scripted":
+        return ScriptedProvider({0: ["VERDICT: CLEAN"]})
     model = os.environ.get("NSE_W_MODEL") or os.environ["NSE_MODEL"]
     return provider_from_env(model=model)
 
