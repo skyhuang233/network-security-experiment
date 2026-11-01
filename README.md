@@ -59,7 +59,9 @@ bash runs/exp_c.sh            # persistence curves (no LLM needed)
 
 # LLM runs (recorded experiments use real LLMs only, §1):
 export NSE_API_KEY=... NSE_MODEL=...          # + NSE_API_BASE if needed
-bash runs/exp_a.sh            # main comparison (29 classes x 10 seeds x 3 methods)
+bash runs/exp_a.sh            # the recorded benchmark: 6 classes x 5 seeds x
+                              # 3 methods = 90 runs + 90 negative controls.
+                              # `nse precheck --all` sweeps the full 30 classes
 bash runs/exp_d.sh isolation --case I-01 --seed 0 --method M1
 bash runs/exp_d.sh audit outputs/runs/main-M1-* outputs/runs/negctrl-*
 bash runs/full_run.sh         # entire recorded pipeline, end to end

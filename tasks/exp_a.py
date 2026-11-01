@@ -49,7 +49,12 @@ from src.base import ChannelAdapter, MeasurementLog
 from src.audit_agent import provider_from_env
 from src.metrics import compute_metrics
 from tasks.round_loop import ADAPTERS, build_run
-from benchmark_generator.generator import generate, load_registry
+from benchmark_generator.generator import (
+    BENCHMARK_CLASSES,
+    BENCHMARK_SEEDS_PER_CLASS,
+    generate,
+    load_registry,
+)
 
 # -----------------------------------------------------------------------------
 # CLI arguments
@@ -60,8 +65,10 @@ parser = argparse.ArgumentParser(
 parser.add_argument("--workspace", type=str, default="outputs", help="workspace root (run dirs + reports)")
 parser.add_argument("--registry", type=str, default="", help="seed registry path (empty = <workspace>/precheck/seed-registry.json)")
 parser.add_argument("--methods", nargs="+", default=["M1", "M2", "M3"], help="storage carriers under study")
-parser.add_argument("--classes", nargs="+", default=None, help="restrict to these task classes (default: all valid)")
-parser.add_argument("--seeds-per-class", type=int, default=None, help="cap valid seeds per class (default: all)")
+parser.add_argument("--classes", nargs="+", default=BENCHMARK_CLASSES,
+                    help="task classes to run (default: the 6-class recorded benchmark)")
+parser.add_argument("--seeds-per-class", type=int, default=BENCHMARK_SEEDS_PER_CLASS,
+                    help="valid seeds per class (default: the recorded benchmark's 5)")
 parser.add_argument("--max-rounds", type=int, default=int(os.environ.get("NSE_MAX_ROUNDS", "100")), help="round budget per run (default: NSE_MAX_ROUNDS or 100)")
 parser.add_argument("--order-seed", type=int, default=2026, help="seed for the randomized run order (§14)")
 parser.add_argument("--no-negative-control", action="store_true", help="skip the separated-backend negative control runs")

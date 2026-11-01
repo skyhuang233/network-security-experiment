@@ -84,6 +84,15 @@ def all_class_ids() -> list[str]:
     return sorted(ALL_CLASSES.keys())
 
 
+# The recorded benchmark.  Six classes, one from each communication pattern
+# (low-payload aggregation, set exchange, one-way dependency, boundary
+# exchange, data redistribution, graph traversal), five instances each.
+# 6 classes x 5 seeds x 3 carriers = 90 task runs, doubled by the
+# separated-backend negative control to the 180 recorded runs.
+BENCHMARK_CLASSES: list[str] = ["I-06", "I-08", "II-11", "II-12", "III-21", "III-24"]
+BENCHMARK_SEEDS_PER_CLASS = 5
+
+
 Oracle = Callable[[TaskInstance, int], Any]
 
 
