@@ -8,7 +8,7 @@ own argparse; run them directly (package installed via `uv sync`):
     python -m tasks.exp_b                                 # capacity calibration (no LLM)
     python -m tasks.exp_c                                 # persistence curves (no LLM)
     python -m tasks.exp_d audit runs/main-M1-*
-    python -m tasks.exp_d isolation --case I-01 --seed 0
+    python -m tasks.exp_d isolation --case I-06 --seed 0
 """
 
 from __future__ import annotations
@@ -33,10 +33,11 @@ def cmd_precheck(args) -> None:
         save_registry,
     )
 
-    # the recorded benchmark: 6 classes x 5 seeds.  --all sweeps every class.
+    # the recorded benchmark: the 6 classes x 5 seeds.  --all keeps the same
+    # classes but sweeps 10 seeds each.
     report = run_precheck(
         target_per_class=10 if args.all else BENCHMARK_SEEDS_PER_CLASS,
-        class_ids=None if args.all else BENCHMARK_CLASSES,
+        class_ids=BENCHMARK_CLASSES,
     )
     out = _workspace() / "precheck" / "seed-registry.json"
     save_registry(report, out)
@@ -54,7 +55,7 @@ def main() -> None:
 
     p = sub.add_parser("precheck", help="§11 dependency precheck")
     p.add_argument("--all", action="store_true",
-                   help="sweep all 30 classes x 10 seeds instead of the recorded benchmark")
+                   help="sweep 10 seeds per class instead of the recorded benchmark's 5")
     p.set_defaults(func=cmd_precheck)
 
     args = parser.parse_args()

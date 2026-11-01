@@ -1,8 +1,8 @@
 """Experiment A: standard task comparison (§9) + the two controls (§9 end).
 
-For each of the 29 valid task classes (I-03 structurally degenerate) x 10
-valid seeds (precheck registry) x 3 methods (M1/M2/M3), run the full
-round loop with real LLM task agents and compute the seven metrics per run.
+For each class of the recorded benchmark (I-06, I-08, II-11, II-12, III-21,
+III-24; 5 seeds each) x 3 methods (M1/M2/M3), run the full round loop with
+real LLM task agents and compute the seven metrics per run.
 
 Run order is randomized per batch; shared state and agent history are
 cleared before every run (§14).
@@ -25,7 +25,7 @@ flow, so importing the shared runtime is safe.
 
 Nanochat-style script; run from the repo root (package installed via `uv sync`):
 
-    python -m tasks.exp_a --classes I-01 I-04
+    python -m tasks.exp_a --classes I-06 I-08
     python -m tasks.exp_a --seeds-per-class 2
 
 Recorded runs use the real LLM (`--provider openai`, the default; requires
