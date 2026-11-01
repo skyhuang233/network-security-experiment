@@ -1,10 +1,11 @@
 """SILO-BENCH benchmark generation stack.
 
 Mirrors the upstream layout `benchmark_generator/`: the three `paradigm_*`
-modules define the 30 task classes (I-01..III-30), and `generator` assembles
-one TaskCase per (class, seed) into per-agent input shards + prompt templates,
-carries the local oracles, and runs the §11 dependency precheck that keeps
-only instances which actually require communication.
+modules define the 6 task classes (I-06, I-08, II-11, II-12, III-21, III-24),
+and `generator` assembles one TaskCase per (class, seed) into per-agent
+input shards + prompt templates, carries the local oracles, and runs the
+§11 dependency precheck that keeps only instances which actually require
+communication.
 
 Consumed by `tasks.exp_a` / `tasks.exp_d` (via `generate(case_id, seed)` and
 `load_registry`) and by `nse precheck` (`run_precheck` / `save_registry`);

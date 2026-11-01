@@ -27,8 +27,8 @@ class ExpAScriptedSmokeTest(unittest.TestCase):
             # 1. a legal temporary registry (dependency precheck path)
             from benchmark_generator.generator import run_precheck, save_registry
 
-            report = run_precheck(target_per_class=1, class_ids=["I-01"])
-            self.assertGreaterEqual(report["classes"]["I-01"]["valid_count"], 1)
+            report = run_precheck(target_per_class=1, class_ids=["I-06"])
+            self.assertGreaterEqual(report["classes"]["I-06"]["valid_count"], 1)
             registry = tmp / "seed-registry.json"
             save_registry(report, registry)
 
@@ -43,7 +43,7 @@ class ExpAScriptedSmokeTest(unittest.TestCase):
                     sys.executable, "-m", "tasks.exp_a",
                     "--workspace", str(workspace),
                     "--registry", str(registry),
-                    "--classes", "I-01",
+                    "--classes", "I-06",
                     "--seeds-per-class", "1",
                     "--methods", "M1",
                     "--max-rounds", "10",

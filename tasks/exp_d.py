@@ -18,7 +18,7 @@ compare before/after (no new "defense effectiveness" metric, §9):
 Nanochat-style script; run from the repo root (package installed via `uv sync`):
 
     python -m tasks.exp_d audit runs/main-M1-* runs/negctrl-*
-    python -m tasks.exp_d isolation --case I-01 --seed 0 --method M1
+    python -m tasks.exp_d isolation --case I-06 --seed 0 --method M1
 
 Requires NSE_API_KEY / NSE_MODEL in the environment.  The W judge binds
 NSE_W_MODEL (falling back to NSE_MODEL); task agents bind NSE_MODEL.
@@ -79,7 +79,7 @@ p_audit.add_argument("--workers", type=int, default=1,
 p_audit.add_argument("run_dirs", nargs="+", help="persisted run directories (measurement.json inside)")
 
 p_iso = sub.add_parser("isolation", help="isolation controls comparison")
-p_iso.add_argument("--case", required=True, help="task case id, e.g. I-01")
+p_iso.add_argument("--case", required=True, help="task case id, e.g. I-06")
 p_iso.add_argument("--seed", type=int, required=True, help="task seed")
 p_iso.add_argument("--method", default="M1", help="storage carrier")
 p_iso.add_argument("--controls", nargs="+", default=None, help="subset of controls (default: all)")

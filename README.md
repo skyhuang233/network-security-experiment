@@ -39,7 +39,8 @@ tasks/                     experiment scripts (nanochat-style standalone runs);
   exp_b.py                 B (capacity calibration); owns its measurement log
   exp_c.py                 C (persistence/TTL/interference); owns its measurement log
   exp_d.py                 D (W audit + isolation controls); owns its measurement log
-benchmark_generator/      30 SILO classes ported to parameterized seeds
+benchmark_generator/      the 6 recorded benchmark classes (I-06, I-08,
+                          II-11, II-12, III-21, III-24), seed-parameterized
                            (paradigm I/II/III generators, seed-parameterized);
                            generator.py: instance assembly, local oracles,
                            §11 dependency precheck -> seed-registry.json
@@ -59,14 +60,16 @@ bash runs/exp_c.sh            # persistence curves (no LLM needed)
 
 # LLM runs (recorded experiments use real LLMs only, §1):
 export NSE_API_KEY=... NSE_MODEL=...          # + NSE_API_BASE if needed
-bash runs/exp_a.sh            # main comparison (29 classes x 10 seeds x 3 methods)
-bash runs/exp_d.sh isolation --case I-01 --seed 0 --method M1
+bash runs/exp_a.sh            # the recorded benchmark: 6 classes x 5 seeds x
+                              # 3 methods = 90 runs + 90 negative controls.
+                              # `nse precheck --all` sweeps 10 seeds per class
+bash runs/exp_d.sh isolation --case I-06 --seed 0 --method M1
 bash runs/exp_d.sh audit outputs/runs/main-M1-* outputs/runs/negctrl-*
 bash runs/full_run.sh         # entire recorded pipeline, end to end
 ```
 
 Extra args pass through to each experiment's argparse (e.g.
-`bash runs/exp_a.sh --classes I-01 --seeds-per-class 1`); long runs fit a
+`bash runs/exp_a.sh --classes I-06 --seeds-per-class 1`); long runs fit a
 screen session (`screen -L -Logfile runs/exp_a.log -S exp_a bash runs/exp_a.sh`).
 
 Configuration (model binding, K, BER threshold) resolves from environment
@@ -104,14 +107,6 @@ imported for unit testing).
 
 ## Findings baked into the implementation
 
-- **I-03 is structurally degenerate at n=2**: the forced-majority vote
-  construction puts the global winner in *both* shards, so both agents are
-  always locally self-sufficient.  Recorded and excluded by the precheck
-  (never silently dropped); the other 29 classes yield 10 valid instances
-  each with the reseeding process recorded.
-- **I-04 degenerate rate ≈ 50%** at n=2 (no-ERROR seeds are trivially
-  self-sufficient for both agents); the plan's pilot ~30% was measured on a
-  different seed set.  Reseeding is exercised accordingly.
 - **M3 physical publication state**: the key set carries a publication
   toggle + activity marker as the last two of `M3_RESERVED_KEYS` reserved
   keys (`src/frame.py`), so even a *fresh* receiver (persistence test) can
