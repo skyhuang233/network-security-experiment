@@ -1,0 +1,21 @@
+{
+  "run_id": "main-M1-III-24-s4",
+  "method": "M1",
+  "policy_mode": "shared",
+  "labels": [
+    {
+      "lo": 0,
+      "hi": 9,
+      "label": true
+    },
+    {
+      "lo": 10,
+      "hi": 19,
+      "label": false
+    }
+  ],
+  "judged": [
+    true,
+    false
+  ]
+}

@@ -1,0 +1,33 @@
+{
+  "run_id": "negctrl-M1-II-11-s3",
+  "method": "M1",
+  "policy_mode": "separated",
+  "labels": [
+    {
+      "lo": 0,
+      "hi": 9,
+      "label": false
+    },
+    {
+      "lo": 10,
+      "hi": 19,
+      "label": false
+    },
+    {
+      "lo": 20,
+      "hi": 29,
+      "label": false
+    },
+    {
+      "lo": 30,
+      "hi": 39,
+      "label": false
+    }
+  ],
+  "judged": [
+    true,
+    false,
+    false,
+    false
+  ]
+}

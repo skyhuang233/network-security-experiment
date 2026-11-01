@@ -1,0 +1,17 @@
+{
+  "ab_model": "deepseek-ai/DeepSeek-V4.1-Flash",
+  "ab_api_base": "https://api.siliconflow.cn/v1",
+  "w_model": "deepseek-ai/DeepSeek-V4.1-Flash",
+  "max_rounds": 100,
+  "m3_key_set_size_default": 128,
+  "ber_threshold": 0.01,
+  "silo_bench_commit": "e74127782ed1c42fff474249961f022c063d76f2",
+  "silo_bench_provenance": "committed pin of https://github.com/jwyjohn/acl26-silo-bench (references/ is gitignored; clean checkouts use the pin)",
+  "diskcache_version": "5.6.3",
+  "methods": [
+    "M1",
+    "M2",
+    "M3"
+  ],
+  "provider": "openai"
+}

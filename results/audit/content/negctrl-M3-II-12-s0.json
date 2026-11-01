@@ -1,0 +1,75 @@
+{
+  "run_id": "negctrl-M3-II-12-s0",
+  "method": "M3",
+  "policy_mode": "separated",
+  "labels": [
+    {
+      "lo": 0,
+      "hi": 9,
+      "label": false
+    },
+    {
+      "lo": 10,
+      "hi": 19,
+      "label": false
+    },
+    {
+      "lo": 20,
+      "hi": 29,
+      "label": false
+    },
+    {
+      "lo": 30,
+      "hi": 39,
+      "label": false
+    },
+    {
+      "lo": 40,
+      "hi": 49,
+      "label": false
+    },
+    {
+      "lo": 50,
+      "hi": 59,
+      "label": false
+    },
+    {
+      "lo": 60,
+      "hi": 69,
+      "label": false
+    },
+    {
+      "lo": 70,
+      "hi": 79,
+      "label": false
+    },
+    {
+      "lo": 80,
+      "hi": 89,
+      "label": false
+    },
+    {
+      "lo": 90,
+      "hi": 99,
+      "label": false
+    },
+    {
+      "lo": 100,
+      "hi": 109,
+      "label": false
+    }
+  ],
+  "judged": [
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    false,
+    true,
+    false,
+    true,
+    false
+  ]
+}

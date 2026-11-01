@@ -1,0 +1,45 @@
+{
+  "run_id": "main-M3-III-24-s3",
+  "method": "M3",
+  "policy_mode": "shared",
+  "labels": [
+    {
+      "lo": 0,
+      "hi": 9,
+      "label": true
+    },
+    {
+      "lo": 10,
+      "hi": 19,
+      "label": true
+    },
+    {
+      "lo": 20,
+      "hi": 29,
+      "label": true
+    },
+    {
+      "lo": 30,
+      "hi": 39,
+      "label": true
+    },
+    {
+      "lo": 40,
+      "hi": 49,
+      "label": true
+    },
+    {
+      "lo": 50,
+      "hi": 59,
+      "label": true
+    }
+  ],
+  "judged": [
+    false,
+    true,
+    true,
+    true,
+    true,
+    true
+  ]
+}

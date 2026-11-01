@@ -1,0 +1,15 @@
+{
+  "run_id": "main-M2-III-21-s0",
+  "method": "M2",
+  "policy_mode": "shared",
+  "labels": [
+    {
+      "lo": 0,
+      "hi": 9,
+      "label": true
+    }
+  ],
+  "judged": [
+    true
+  ]
+}
