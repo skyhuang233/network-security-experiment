@@ -63,9 +63,20 @@ covert channel, sandbox isolation, AI agents, information flow control, storage 
 
 % ---- Introduction ----
 \section{Introduction}
+
+\begin{figure}[!t]
+    \centering
+    \includegraphics[width=0.90\columnwidth]{figures/experiment-framework-intro.pdf}
+    \caption{Experimental pipeline for storage-mediated communication: private inputs, one storage carrier, offline audit, and evaluation. The negative control separates backends. Shard values are illustrative.}
+    \label{fig:experiment-framework}
+\end{figure}
 \IEEEPARstart{S}{andbox} isolation is a foundational security primitive in multi-agent AI systems: agents assigned to separate execution environments are assumed to be unable to share information without an explicit, authorized channel. This assumption underpins access-control models in cloud-hosted agent pipelines, multi-tenant LLM deployments, and research sandboxes alike.
 
 The assumption fails at the storage layer. When two agents share access to any common storage resource---a file repository, a mounted directory, or a shared cache---an agent can encode information in the \emph{state} of that resource rather than in an explicit message, establishing a covert channel that bypasses policy-level communication controls. Because both the write and the read are individually permitted operations, this class of attack is invisible to syscall filters and standard data-loss prevention systems that monitor only message content.
+
+Fig.~\ref{fig:experiment-framework} provides an overview of our experimental pipeline.
+
+
 
 Recent systems-security literature has documented storage covert channels in cloud-storage services~\cite{caviglione2016dropbox}, OS-level disk synchronization primitives~\cite{jiang2024sync,chen2024write}, and non-volatile memory caches~\cite{wang2023nvleak}. However, these works address specific mechanisms in isolation and do not compare channels under a common threat model with real AI agents performing meaningful tasks. We close this gap with a unified controlled experiment.
 
@@ -116,15 +127,6 @@ We define four entities:
     \item \textbf{Defender W}: A monitor with read access to S that issues verdicts on windows of observed storage activity.
 \end{enumerate}
 The security goal is \textit{noninterference}: B's observations of S should convey no information about A's private task input. The threat is that A and B, both holding legitimate permissions to S, exploit S as an unintended signaling medium to coordinate on a shared task without a direct message channel.
-
-Fig.~\ref{fig:experiment-framework} summarizes the experimental framework, the three storage carriers, and the offline audit path.
-
-\begin{figure*}[!t]
-    \centering
-    \includegraphics[height=0.76\textheight,keepaspectratio]{figures/experiment-framework-vertical.pdf}
-    \caption{Experimental pipeline for storage-mediated communication, read from top to bottom. Step~1 distributes private task shards to agents A and B; the displayed values are illustrative. Step~2 uses one of three carriers per run: file bodies (M1), empty-directory names (M2), or cache-key existence (M3). Step~3 constructs content-only and extended audit views for offline monitor W; neither view exposes decoded messages or evaluation ground truth. Step~4 summarizes task success, capacity, persistence, and audit TPR/FPR. Capacity and persistence tests use programmatic drivers without LLM inference. The matched negative control separates the agents' storage backends.}
-    \label{fig:experiment-framework}
-\end{figure*}
 
 \subsection{Channel Designs}
 
